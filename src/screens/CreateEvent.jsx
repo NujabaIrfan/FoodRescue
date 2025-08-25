@@ -1,5 +1,5 @@
 import Checkbox from 'expo-checkbox';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Image,
   StyleSheet,
@@ -8,14 +8,25 @@ import {
   View,
   ScrollView,
   TouchableOpacity,
+  Platform,
+  PermissionsAndroid,
 } from 'react-native';
 
 import { launchImageLibrary } from 'react-native-image-picker';
 import DateTimePicker from 'react-native-ui-datepicker';
-import { MapView } from "@maplibre/maplibre-react-native";
+import {
+  Camera,
+  MapView,
+  RasterLayer,
+  RasterSource,
+  UserLocation,
+} from '@maplibre/maplibre-react-native';
+
+import pinImage from '../../assets/pin.png';
 
 export default function CreateEvent() {
   const [image, setImage] = useState(require('../../assets/default-image.jpg'));
+  const coordinatesRef = useRef();
   const [eventDateTime, setEventDateTime] = useState(new Date());
   const [hasPhysicalVenue, setHasPhysicalVenue] = useState(false);
 
@@ -28,6 +39,32 @@ export default function CreateEvent() {
     });
     if (res.assets.length === 1) setImage({ uri: res.assets[0].uri });
   };
+
+  async function requestLocationPermission() {
+    if (Platform.OS === 'android') {
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+          {
+            title: 'Location Permission',
+            message: 'App needs access to your location',
+            buttonNeutral: 'Ask Me Later',
+            buttonNegative: 'Cancel',
+            buttonPositive: 'OK',
+          }
+        );
+        return granted === PermissionsAndroid.RESULTS.GRANTED;
+      } catch (err) {
+        console.warn(err);
+        return false;
+      }
+    }
+    return true;
+  }
+
+  useEffect(() => {
+    requestLocationPermission();
+  }, [requestLocationPermission]);
 
   return (
     <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -72,7 +109,33 @@ export default function CreateEvent() {
       {hasPhysicalVenue && (
         <View>
           <Text style={styles.infoText}>Please select a venue below.</Text>
-           <MapView style={styles.mapView} />         
+          <View style={styles.mapContainer}>
+            <MapView
+              style={styles.mapView}
+              onRegionDidChange={(feature) =>
+                (coordinatesRef.current = feature.geometry.coordinates)
+              }
+            >
+              <RasterSource
+                id="osm"
+                tileUrlTemplates={[
+                  'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+                ]}
+                tileSize={256}
+              >
+                <RasterLayer id="osm-layer" sourceID="osm" />
+              </RasterSource>
+              <UserLocation visible={true} showsUserHeadingIndicator={true} />
+              <Camera
+                zoomLevel={18}
+                followUserLocation={true}
+                followUserMode="compass"
+              />
+            </MapView>
+            <View style={styles.mapCenterMark}>
+              <Image source={pinImage} />
+            </View>
+          </View>
         </View>
       )}
 
@@ -99,7 +162,7 @@ export default function CreateEvent() {
 const styles = StyleSheet.create({
   content: {
     padding: 16,
-    backgroundColor: "#fefefe"
+    backgroundColor: '#fefefe',
   },
   flexRow: {
     flexDirection: 'row',
@@ -207,9 +270,18 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   mapView: {
-    width: "100%",
+    width: '100%',
     height: 300,
     marginTop: 10,
-    marginBottom: 10
-  }
+    marginBottom: 10,
+  },
+  mapContainer: {
+    position: 'relative',
+  },
+  mapCenterMark: {
+    position: 'absolute',
+    left: '50%',
+    top: '50%',
+    zIndex: 10,
+  },
 });
