@@ -17,7 +17,7 @@ import { MapView } from "@maplibre/maplibre-react-native";
 export default function CreateEvent() {
   const [image, setImage] = useState(require('../../assets/default-image.jpg'));
   const [eventDateTime, setEventDateTime] = useState(new Date());
-  const [hasPhysicalVenue, setHasPhysicalVenue] = useState(true);
+  const [hasPhysicalVenue, setHasPhysicalVenue] = useState(false);
 
   const uploadImage = async () => {
     let res = await launchImageLibrary({
@@ -26,7 +26,7 @@ export default function CreateEvent() {
       maxHeight: 500,
       selectionLimit: 1,
     });
-    if (res.assets.length === 1) setImage(res.assets[0].uri);
+    if (res.assets.length === 1) setImage({ uri: res.assets[0].uri });
   };
 
   return (
@@ -72,16 +72,14 @@ export default function CreateEvent() {
       {hasPhysicalVenue && (
         <View>
           <Text style={styles.infoText}>Please select a venue below.</Text>
-           <MapView style={{flex: 1, width: "100%", height: 300 }} />
-            
-          
+           <MapView style={styles.mapView} />         
         </View>
       )}
 
       <View style={styles.imageUploadView}>
         <Image source={image} style={styles.imagePreview} />
         <View style={{ flexGrow: 1 }}>
-          <Text style={styles.label}>Upload an image Image</Text>
+          <Text style={styles.label}>Upload an image</Text>
           <TouchableOpacity style={styles.button} onPress={uploadImage}>
             <Text style={styles.buttonText}>Upload</Text>
           </TouchableOpacity>
@@ -208,4 +206,10 @@ const styles = StyleSheet.create({
     elevation: 2,
     marginBottom: 12,
   },
+  mapView: {
+    width: "100%",
+    height: 300,
+    marginTop: 10,
+    marginBottom: 10
+  }
 });
