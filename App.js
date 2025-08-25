@@ -5,6 +5,11 @@ import CreateOrganization from './src/screens/CreateOrganization';
 import Home from './src/screens/Home';
 import Signup from './src/screens/Signup';
 import RestaurantList from './src/screens/RestaurantList';
+import Organizations from './src/screens/Organizations';
+import Organization from './src/screens/Organization';
+import DonorSignUp from './src/screens/DonorSignUp';
+import Toast from 'react-native-toast-message';
+import CreateEvent from './src/screens/CreateEvent';
 import CreateFoodRequest from './src/screens/CreateFoodRequest';
 
 const RootStack = createNativeStackNavigator({
@@ -14,6 +19,10 @@ const RootStack = createNativeStackNavigator({
     createOrganization: CreateOrganization,
     signup: Signup,
     restaurantList: RestaurantList,
+    organizations: Organizations,
+    organization: Organization,
+    createEvent: CreateEvent,
+    donorSignUp: DonorSignUp,
     createFoodRequest: CreateFoodRequest
   },
 });
@@ -21,7 +30,12 @@ const RootStack = createNativeStackNavigator({
 const Navigation = createStaticNavigation(RootStack);
 
 export default function App() {
-  return <Navigation />;
+  return (
+    <>
+      <Navigation />
+      <Toast />
+    </>
+  );
 }
 
 const styles = StyleSheet.create({

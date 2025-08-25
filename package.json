@@ -5,25 +5,35 @@
   "main": "index.js",
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
   "dependencies": {
     "@expo/metro-runtime": "~5.0.4",
+    "@maplibre/maplibre-react-native": "^10.2.1",
     "@react-navigation/native": "^7.1.17",
     "@react-navigation/native-stack": "^7.3.25",
+    "bcrypt": "^6.0.0",
     "expo": "~53.0.20",
+    "expo-checkbox": "~4.1.4",
     "expo-status-bar": "~2.2.3",
     "firebase": "^12.1.0",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-native": "0.79.5",
+    "react-native-bcrypt": "^2.4.0",
+    "react-native-dotenv": "^3.4.11",
+    "react-native-image-picker": "^8.2.1",
+    "react-native-maps": "1.20.1",
     "react-native-safe-area-context": "^5.4.0",
     "react-native-screens": "~4.11.1",
-    "react-native-web": "^0.20.0"
+    "react-native-toast-message": "^2.3.3",
+    "react-native-ui-datepicker": "^3.1.2",
+    "react-native-web": "^0.20.0",
+    "react-native-webview": "13.13.5"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

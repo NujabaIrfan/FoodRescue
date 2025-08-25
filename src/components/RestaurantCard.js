@@ -1,6 +1,13 @@
 // components/RestaurantCard.js
 import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, Linking } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  TouchableOpacity,
+  Linking,
+} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 const RestaurantCard = ({ restaurant, onPress }) => {
@@ -12,26 +19,26 @@ const RestaurantCard = ({ restaurant, onPress }) => {
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress}>
-      <Image 
-        source={{ uri: restaurant.imageUrl }} 
+      <Image
+        source={{ uri: restaurant.imageUrl }}
         style={styles.image}
         resizeMode="cover"
       />
       <View style={styles.favoriteIcon}>
         <Icon name="favorite-border" size={28} color="#fff" />
       </View>
-      
+
       <View style={styles.cardContent}>
         <Text style={styles.name}>{restaurant.name}</Text>
         <Text style={styles.cuisine}>{restaurant.cuisine}</Text>
-        
+
         {/* Description */}
         {restaurant.description && (
           <Text style={styles.description} numberOfLines={2}>
             {restaurant.description}
           </Text>
         )}
-        
+
         <View style={styles.detailsContainer}>
           {/* Address */}
           <View style={styles.detailRow}>
@@ -40,7 +47,7 @@ const RestaurantCard = ({ restaurant, onPress }) => {
               {restaurant.address}
             </Text>
           </View>
-          
+
           {/* Hours */}
           {restaurant.hours && (
             <View style={styles.detailRow}>
@@ -48,7 +55,7 @@ const RestaurantCard = ({ restaurant, onPress }) => {
               <Text style={styles.detailText}>{restaurant.hours}</Text>
             </View>
           )}
-          
+
           {/* Phone */}
           {restaurant.phone && (
             <View style={styles.detailRow}>
@@ -57,7 +64,7 @@ const RestaurantCard = ({ restaurant, onPress }) => {
             </View>
           )}
         </View>
-        
+
         <View style={styles.actionButtons}>
           <TouchableOpacity style={styles.button}>
             <Text style={styles.buttonText}>View Available Donations</Text>
