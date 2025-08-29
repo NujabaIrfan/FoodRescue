@@ -127,7 +127,12 @@ const RestaurantList = () => {
       {/* 🔎 Search Bar */}
       <View style={styles.searchContainer}>
         <View style={styles.searchInputContainer}>
-          <Icon name="search" size={20} color="#555" style={styles.searchIcon} />
+          <Icon
+            name="search"
+            size={20}
+            color="#555"
+            style={styles.searchIcon}
+          />
           <TextInput
             style={styles.searchInput}
             placeholder="Search by name or location..."
@@ -257,7 +262,12 @@ const styles = StyleSheet.create({
   },
   errorHelp: { color: '#555', fontSize: 14, textAlign: 'center' },
   emptyText: { fontSize: 18, color: '#555', marginTop: 12, fontWeight: '500' },
-  emptySubtext: { fontSize: 14, color: '#888', marginTop: 4, textAlign: 'center' },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#888',
+    marginTop: 4,
+    textAlign: 'center',
+  },
   list: { padding: 16 },
 });
 

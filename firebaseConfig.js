@@ -1,16 +1,16 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getAnalytics } from 'firebase/analytics';
-import { getAuth } from "firebase/auth";
+import { getAuth } from 'firebase/auth';
 
-import { 
-  FIREBASE_API_KEY, 
-  FIREBASE_AUTH_DOMAIN, 
-  FIREBASE_PROJECT_ID, 
-  FIREBASE_STORAGE_BUCKET, 
-  FIREBASE_MESSAGING_SENDER_ID, 
-  FIREBASE_APP_ID, 
-  FIREBASE_MEASUREMENT_ID 
+import {
+  FIREBASE_API_KEY,
+  FIREBASE_AUTH_DOMAIN,
+  FIREBASE_PROJECT_ID,
+  FIREBASE_STORAGE_BUCKET,
+  FIREBASE_MESSAGING_SENDER_ID,
+  FIREBASE_APP_ID,
+  FIREBASE_MEASUREMENT_ID,
 } from '@env';
 
 const firebaseConfig = {

@@ -13,7 +13,8 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.zero-hunger"
     },
     "android": {
       "adaptiveIcon": {
@@ -21,10 +22,14 @@
         "backgroundColor": "#ffffff",
         "package": "com.myapp.demo"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.anonymous.zero_hunger"
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "@maplibre/maplibre-react-native"
+    ]
   }
 }

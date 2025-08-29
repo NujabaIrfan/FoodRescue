@@ -10,6 +10,7 @@ import Icon from 'react-native-vector-icons/FontAwesome6';
 import DonationRequest from '../components/DonationRequest';
 import OrganizationEvent from '../components/OrganizationEvent';
 import { useState } from 'react';
+import { useNavigation } from '@react-navigation/native';
 
 const dummyData = {
   name: 'Green Plate',
@@ -26,6 +27,7 @@ const dummyData = {
 
 const Organization = () => {
   const organizationData = dummyData;
+  const navigator = useNavigation();
   const [isShowingFullDescription, setIsShowingFullDescription] =
     useState(false);
 
@@ -63,7 +65,10 @@ const Organization = () => {
       </Text>
       <View style={styles.heading}>
         <Text style={styles.primaryHeading}>Events</Text>
-        <TouchableOpacity style={styles.button}>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => navigator.navigate('createEvent')}
+        >
           <Text style={styles.buttonText}>Manage events</Text>
         </TouchableOpacity>
       </View>

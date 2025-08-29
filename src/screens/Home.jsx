@@ -1,5 +1,12 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, Image, TouchableOpacity, ScrollView } from 'react-native';
+import {
+  StyleSheet,
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  ScrollView,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
 export default function Home() {
@@ -16,24 +23,30 @@ export default function Home() {
     <ScrollView style={styles.container}>
       {/* Hero Section */}
       <View style={styles.hero}>
-        <Image 
-          source={{uri: 'https://images.unsplash.com/photo-1593113616828-6f22bce62113?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'}}
+        <Image
+          source={{
+            uri: 'https://images.unsplash.com/photo-1593113616828-6f22bce62113?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+          }}
           style={styles.heroImage}
         />
         <View style={styles.heroOverlay}>
           <Text style={styles.heroTitle}>Zero Hunger Initiative</Text>
-          <Text style={styles.heroSubtitle}>Sustainable Food Distribution Solutions</Text>
+          <Text style={styles.heroSubtitle}>
+            Sustainable Food Distribution Solutions
+          </Text>
         </View>
       </View>
-      
+
       {/* Mission Statement */}
       <View style={styles.missionSection}>
         <Text style={styles.sectionTitle}>Our Mission</Text>
         <Text style={styles.missionText}>
-          We leverage technology and strategic partnerships to eliminate food waste while addressing hunger in communities worldwide through efficient distribution networks and sustainable practices.
+          We leverage technology and strategic partnerships to eliminate food
+          waste while addressing hunger in communities worldwide through
+          efficient distribution networks and sustainable practices.
         </Text>
       </View>
-      
+
       {/* Key Metrics */}
       <View style={styles.metricsSection}>
         <Text style={styles.sectionTitle}>Impact Metrics</Text>
@@ -43,57 +56,68 @@ export default function Home() {
               key={index}
               style={[
                 styles.metricCard,
-                { 
-                  backgroundColor: selectedStat === index ? stat.color : '#ffffff',
+                {
+                  backgroundColor:
+                    selectedStat === index ? stat.color : '#ffffff',
                   borderColor: stat.color,
-                }
+                },
               ]}
               onPress={() => setSelectedStat(index)}
             >
-              <Text style={[
-                styles.metricNumber,
-                { color: selectedStat === index ? '#ffffff' : stat.color }
-              ]}>
+              <Text
+                style={[
+                  styles.metricNumber,
+                  { color: selectedStat === index ? '#ffffff' : stat.color },
+                ]}
+              >
                 {stat.number}
               </Text>
-              <Text style={[
-                styles.metricLabel,
-                { color: selectedStat === index ? '#ffffff' : '#64748b' }
-              ]}>
+              <Text
+                style={[
+                  styles.metricLabel,
+                  { color: selectedStat === index ? '#ffffff' : '#64748b' },
+                ]}
+              >
                 {stat.label}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
       </View>
-      
+
       {/* Services */}
       <View style={styles.servicesSection}>
         <Text style={styles.sectionTitle}>Our Services</Text>
-        
-        <TouchableOpacity 
+
+        <TouchableOpacity
           style={[styles.serviceCard, styles.primaryService]}
           onPress={() => navigator.navigate('volunteerSection')}
         >
           <View style={styles.serviceContent}>
             <View style={styles.serviceInfo}>
               <Text style={styles.serviceTitle}>Individual Registration</Text>
-              <Text style={styles.serviceDescription}>Join our platform to volunteer or access food assistance programs in your community</Text>
+              <Text style={styles.serviceDescription}>
+                Join our platform to volunteer or access food assistance
+                programs in your community
+              </Text>
             </View>
             <View style={styles.serviceArrow}>
               <Text style={styles.arrowText}>›</Text>
             </View>
           </View>
         </TouchableOpacity>
-        
-        <TouchableOpacity 
+
+        <TouchableOpacity
           style={[styles.serviceCard, styles.secondaryService]}
           onPress={() => navigator.navigate('createOrganization')}
         >
           <View style={styles.serviceContent}>
             <View style={styles.serviceInfo}>
               <Text style={styles.serviceTitle}>Organization Partnership</Text>
-              <Text style={styles.serviceDescription}>Register your organization to coordinate donation efforts and resource management</Text>
+              <Text style={styles.serviceDescription}>
+                Register your organization to coordinate donation efforts and
+                resource management
+              </Text>
             </View>
             <View style={styles.serviceArrow}>
               <Text style={styles.arrowText}>›</Text>
@@ -101,14 +125,17 @@ export default function Home() {
           </View>
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.serviceCard, styles.secondaryService]}
           onPress={() => navigator.navigate('organization')}
         >
           <View style={styles.serviceContent}>
             <View style={styles.serviceInfo}>
               <Text style={styles.serviceTitle}>Organization </Text>
-              <Text style={styles.serviceDescription}>Your organization can coordinate donation efforts and resource management</Text>
+              <Text style={styles.serviceDescription}>
+                Your organization can coordinate donation efforts and resource
+                management
+              </Text>
             </View>
             <View style={styles.serviceArrow}>
               <Text style={styles.arrowText}>›</Text>
@@ -116,29 +143,34 @@ export default function Home() {
           </View>
         </TouchableOpacity>
 
-         <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.serviceCard, styles.secondaryService]}
           onPress={() => navigator.navigate('organizations')}
         >
           <View style={styles.serviceContent}>
             <View style={styles.serviceInfo}>
               <Text style={styles.serviceTitle}>Organizations</Text>
-              <Text style={styles.serviceDescription}>Your organization can coordinate donation efforts and resource management</Text>
+              <Text style={styles.serviceDescription}>
+                Your organization can coordinate donation efforts and resource
+                management
+              </Text>
             </View>
             <View style={styles.serviceArrow}>
               <Text style={styles.arrowText}>›</Text>
             </View>
           </View>
         </TouchableOpacity>
-        
-        <TouchableOpacity 
+
+        <TouchableOpacity
           style={[styles.serviceCard, styles.tertiaryService]}
           onPress={() => navigator.navigate('restaurantList')}
         >
           <View style={styles.serviceContent}>
             <View style={styles.serviceInfo}>
               <Text style={styles.serviceTitle}>Partner Network</Text>
-              <Text style={styles.serviceDescription}>Access our network of restaurants and food service partners</Text>
+              <Text style={styles.serviceDescription}>
+                Access our network of restaurants and food service partners
+              </Text>
             </View>
             <View style={styles.serviceArrow}>
               <Text style={styles.arrowText}>›</Text>
@@ -146,12 +178,13 @@ export default function Home() {
           </View>
         </TouchableOpacity>
       </View>
-      
+
       {/* Call to Action */}
       <View style={styles.ctaSection}>
         <Text style={styles.ctaTitle}>Make an Impact Today</Text>
         <Text style={styles.ctaDescription}>
-          Join thousands of individuals and organizations working together to create sustainable solutions for food security
+          Join thousands of individuals and organizations working together to
+          create sustainable solutions for food security
         </Text>
         <TouchableOpacity style={styles.ctaButton}>
           <Text style={styles.ctaButtonText}>Support Our Mission</Text>
