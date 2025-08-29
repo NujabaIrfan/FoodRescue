@@ -1,11 +1,19 @@
-import React, { useState } from 'react';
-import { View, Text, Image, TextInput, TouchableOpacity, ScrollView, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useState , useEffect } from 'react';
+import { View, Text, Image, TextInput, TouchableOpacity, ScrollView, StyleSheet, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { CheckBox } from 'react-native-elements';
 import { launchImageLibrary } from 'react-native-image-picker';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { auth, db, storage } from '../../firebaseConfig';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import Toast from 'react-native-toast-message';
+import { useNavigation } from '@react-navigation/native';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 export default function VolunteerSignUp() {
+  const navigation = useNavigation();
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -14,13 +22,27 @@ export default function VolunteerSignUp() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [availability, setAvailability] = useState('');
   const [profilePhoto, setProfilePhoto] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const pickImage = () => {
     launchImageLibrary(
-      { mediaType: 'photo', quality: 1},
+      { mediaType: 'photo', quality: 1 },
       (response) => {
-        if(!response.didCancel && !response.errorCode){
-          setProfilePhoto(response.assets[0].uri);
+        if (!response.didCancel && !response.errorCode) {
+          const file = response.assets[0];
+          const fileSizeLimit = 2 * 1024 * 1024; // 2 MB
+
+          if (file.fileSize > fileSizeLimit) {
+            Toast.show({
+              type: 'error',
+              text1: 'File Too Large',
+              text2: 'Please select an image smaller than 2MB.',
+              position: 'top'
+            });
+            return;
+          }
+
+          setProfilePhoto(file.uri);
         }
       }
     );
@@ -37,20 +59,76 @@ export default function VolunteerSignUp() {
   }
   const [preferredArea, setPreferredArea] = useState('');
 
-  const handleSignup = () => {
-    console.log({
-      name,
-      email,
-      phone,
-      address,
-      password,
-      confirmPassword,
-      availability,
-      profilePhoto,
-      skills,
-      preferredArea
+  useEffect(() => {
+    navigation.setOptions({
+      title: 'Volunteer Registration',
     });
-  };
+  }, [navigation]);
+
+  const handleSignup = async () => {
+    if(!name || !email || !phone || !password || password !== confirmPassword){
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Please fill all fields and make sure passwords match.',
+        position: 'top'
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      const photoURL = profilePhoto || null;
+
+      await setDoc(doc(db, "Volunteers", user.uid), {
+        name,
+        email,
+        phone,
+        address,
+        availability,
+        profilePhoto: photoURL || null,
+        skills,
+        preferredArea,
+        createdAt: new Date()
+      });
+
+      Toast.show({
+        type: 'success',
+        text1: 'Success',
+        text2: 'Volunteer account created successfully!',
+        position: 'top'
+      });
+
+      // Reset fields
+      setTimeout(() => {
+        setName('');
+        setEmail('');
+        setPhone('');
+        setAddress('');
+        setPassword('');
+        setConfirmPassword('');
+        setAvailability('');
+        setProfilePhoto(null);
+        setSkills({cooking:false, delivery:false, packing:false, driving:false});
+        setPreferredArea('');
+      }, 50);
+
+    } catch(error) {
+      console.error(error.message);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: error.message,
+        position: 'top'
+      });
+    } finally {
+      setLoading(false);
+    }
+ };
 
   return (
     <KeyboardAvoidingView 
@@ -180,6 +258,28 @@ const styles = StyleSheet.create({
   scrollContainer: {
     padding: 20,
     paddingBottom: 40,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#2c3e50',
+  },
+  profileIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#ccc',
   },
   card: {
     width: '100%',
