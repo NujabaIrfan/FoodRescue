@@ -91,7 +91,7 @@ export default function Home() {
 
         <TouchableOpacity
           style={[styles.serviceCard, styles.primaryService]}
-          onPress={() => navigator.navigate('signup')}
+          onPress={() => navigator.navigate('volunteerSection')}
         >
           <View style={styles.serviceContent}>
             <View style={styles.serviceInfo}>

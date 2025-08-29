@@ -10,6 +10,11 @@ import Organization from './src/screens/Organization';
 import DonorSignUp from './src/screens/DonorSignUp';
 import Toast from 'react-native-toast-message';
 import CreateEvent from './src/screens/CreateEvent';
+import VolunteerLogin from './src/screens/VolunteerLogin';
+import VolunteerSection from './src/screens/VolunteerSection';
+import VolunteerProfile from './src/screens/VolunteerProfile';
+
+import VolunteerSignUp from './src/screens/VolunteerSignUp';
 
 const RootStack = createNativeStackNavigator({
   initialRouteName: 'home',
@@ -22,6 +27,11 @@ const RootStack = createNativeStackNavigator({
     organization: Organization,
     createEvent: CreateEvent,
     donorSignUp: DonorSignUp,
+    donorSignUp: DonorSignUp,
+    volunteerSignUp : VolunteerSignUp,
+    volunteerLogin : VolunteerLogin,
+    volunteerSection : VolunteerSection,
+    volunteerProfile : VolunteerProfile,
   },
 });
 
