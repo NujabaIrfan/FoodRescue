@@ -23,7 +23,8 @@
         "package": "com.myapp.demo"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.zero_hunger"
+      "package": "com.anonymous.zero_hunger",
+      "permissions": ["android.permission.ACCESS_FINE_LOCATION", "android.permission.ACCESS_COARSE_LOCATION"]
     },
     "web": {
       "favicon": "./assets/favicon.png"

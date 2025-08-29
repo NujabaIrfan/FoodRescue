@@ -1,5 +1,5 @@
 import Checkbox from 'expo-checkbox';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Image,
   StyleSheet,
@@ -8,16 +8,27 @@ import {
   View,
   ScrollView,
   TouchableOpacity,
+  Platform,
+  PermissionsAndroid,
 } from 'react-native';
 
 import { launchImageLibrary } from 'react-native-image-picker';
 import DateTimePicker from 'react-native-ui-datepicker';
-import { MapView } from "@maplibre/maplibre-react-native";
+import {
+  Camera,
+  MapView,
+  RasterLayer,
+  RasterSource,
+  UserLocation,
+} from '@maplibre/maplibre-react-native';
+
+import pinImage from '../../assets/pin.png';
 
 export default function CreateEvent() {
   const [image, setImage] = useState(require('../../assets/default-image.jpg'));
+  const coordinatesRef = useRef();
   const [eventDateTime, setEventDateTime] = useState(new Date());
-  const [hasPhysicalVenue, setHasPhysicalVenue] = useState(true);
+  const [hasPhysicalVenue, setHasPhysicalVenue] = useState(false);
 
   const uploadImage = async () => {
     let res = await launchImageLibrary({
@@ -26,8 +37,34 @@ export default function CreateEvent() {
       maxHeight: 500,
       selectionLimit: 1,
     });
-    if (res.assets.length === 1) setImage(res.assets[0].uri);
+    if (res.assets.length === 1) setImage({ uri: res.assets[0].uri });
   };
+
+  async function requestLocationPermission() {
+    if (Platform.OS === 'android') {
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+          {
+            title: 'Location Permission',
+            message: 'App needs access to your location',
+            buttonNeutral: 'Ask Me Later',
+            buttonNegative: 'Cancel',
+            buttonPositive: 'OK',
+          }
+        );
+        return granted === PermissionsAndroid.RESULTS.GRANTED;
+      } catch (err) {
+        console.warn(err);
+        return false;
+      }
+    }
+    return true;
+  }
+
+  useEffect(() => {
+    requestLocationPermission();
+  }, [requestLocationPermission]);
 
   return (
     <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -72,16 +109,40 @@ export default function CreateEvent() {
       {hasPhysicalVenue && (
         <View>
           <Text style={styles.infoText}>Please select a venue below.</Text>
-           <MapView style={{flex: 1, width: "100%", height: 300 }} />
-            
-          
+          <View style={styles.mapContainer}>
+            <MapView
+              style={styles.mapView}
+              onRegionDidChange={(feature) =>
+                (coordinatesRef.current = feature.geometry.coordinates)
+              }
+            >
+              <RasterSource
+                id="osm"
+                tileUrlTemplates={[
+                  'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+                ]}
+                tileSize={256}
+              >
+                <RasterLayer id="osm-layer" sourceID="osm" />
+              </RasterSource>
+              <UserLocation visible={true} showsUserHeadingIndicator={true} />
+              <Camera
+                zoomLevel={18}
+                followUserLocation={true}
+                followUserMode="compass"
+              />
+            </MapView>
+            <View style={styles.mapCenterMark}>
+              <Image source={pinImage} />
+            </View>
+          </View>
         </View>
       )}
 
       <View style={styles.imageUploadView}>
         <Image source={image} style={styles.imagePreview} />
         <View style={{ flexGrow: 1 }}>
-          <Text style={styles.label}>Upload an image Image</Text>
+          <Text style={styles.label}>Upload an image</Text>
           <TouchableOpacity style={styles.button} onPress={uploadImage}>
             <Text style={styles.buttonText}>Upload</Text>
           </TouchableOpacity>
@@ -101,7 +162,7 @@ export default function CreateEvent() {
 const styles = StyleSheet.create({
   content: {
     padding: 16,
-    backgroundColor: "#fefefe"
+    backgroundColor: '#fefefe',
   },
   flexRow: {
     flexDirection: 'row',
@@ -207,5 +268,20 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 2,
     marginBottom: 12,
+  },
+  mapView: {
+    width: '100%',
+    height: 300,
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  mapContainer: {
+    position: 'relative',
+  },
+  mapCenterMark: {
+    position: 'absolute',
+    left: '50%',
+    top: '50%',
+    zIndex: 10,
   },
 });
