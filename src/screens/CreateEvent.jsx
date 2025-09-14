@@ -14,13 +14,13 @@ import {
 
 import { launchImageLibrary } from 'react-native-image-picker';
 import DateTimePicker from 'react-native-ui-datepicker';
-import {
+/*import {
   Camera,
   MapView,
   RasterLayer,
   RasterSource,
   UserLocation,
-} from '@maplibre/maplibre-react-native';
+} from '@maplibre/maplibre-react-native';*/
 
 import pinImage from '../../assets/pin.png';
 
@@ -106,7 +106,7 @@ export default function CreateEvent() {
         </View>
       </View>
 
-      {hasPhysicalVenue && (
+      {/*hasPhysicalVenue && (
         <View>
           <Text style={styles.infoText}>Please select a venue below.</Text>
           <View style={styles.mapContainer}>
@@ -137,7 +137,7 @@ export default function CreateEvent() {
             </View>
           </View>
         </View>
-      )}
+      )*/}
 
       <View style={styles.imageUploadView}>
         <Image source={image} style={styles.imagePreview} />
