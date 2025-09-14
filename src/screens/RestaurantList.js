@@ -43,7 +43,7 @@ const RestaurantList = () => {
       headerRight: () => (
         <TouchableOpacity
           style={{ marginRight: 15 }}
-          onPress={() => navigation.navigate('donorSignUp')} // 👈 Navigate to DonorSignUp screen
+          onPress={() => navigation.navigate('donorSignIn')} // 👈 Navigate to DonorSignIn screen
         >
           <Icon name="account-circle" size={28} color="#fff" />
         </TouchableOpacity>

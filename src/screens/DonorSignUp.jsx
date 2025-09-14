@@ -36,7 +36,7 @@ const DonorSignUp = () => {
 
   useEffect(() => {
     navigation.setOptions({
-      title: 'Donors',
+      title: 'Sign Up as Donor',
       headerStyle: {
         backgroundColor: '#389c9a',
         elevation: 0,
@@ -333,7 +333,7 @@ const DonorSignUp = () => {
           {/* Redirect to Login */}
           <View style={styles.loginRedirect}>
             <Text style={styles.loginText}>Already have an account? </Text>
-            <TouchableOpacity onPress={() => console.log('Navigate to login')}>
+             <TouchableOpacity onPress={() => navigation.navigate('donorSignIn')}>
               <Text style={styles.loginLink}>Sign In Here</Text>
             </TouchableOpacity>
           </View>
