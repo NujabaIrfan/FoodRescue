@@ -177,6 +177,25 @@ export default function Home() {
             </View>
           </View>
         </TouchableOpacity>
+
+
+          {/* temporary */}
+        <TouchableOpacity
+          style={[styles.serviceCard, styles.primaryService]}
+          onPress={() => navigator.navigate('foodRequestMgtNav')}
+        >
+          <View style={styles.serviceContent}>
+            <View style={styles.serviceInfo}>
+              <Text style={styles.serviceTitle}>Food Requests</Text>
+              <Text style={styles.serviceDescription}>
+                Create and access Food Requests here 
+              </Text>
+            </View>
+            <View style={styles.serviceArrow}>
+              <Text style={styles.arrowText}>›</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
       </View>
 
       {/* Call to Action */}
