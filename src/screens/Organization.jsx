@@ -23,6 +23,36 @@ const dummyData = {
     memberCount: 150,
     createdDate: Date.now() - 1000 * 60 * 60 * 24 * 500, // 500 days ago
   },
+  events: [
+    {
+      eventName: 'Community Food Drive',
+      venue: 'Colombo, Sri Lanka',
+      datetime: Date.now() - 1000 * 60 * 60 * 24 * 7, // 7 days ago
+      image:
+        'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=500&q=80',
+    },
+    {
+      eventName: 'Meal Distribution',
+      venue: 'Kandy, Sri Lanka',
+      datetime: Date.now() - 1000 * 60 * 60 * 24 * 30, // 30 days ago
+      image:
+        'https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=500&q=80',
+    },
+    {
+      eventName: 'Charity Lunch',
+      venue: 'Galle, Sri Lanka',
+      datetime: Date.now() - 1000 * 60 * 60 * 24 * 60, // 60 days ago
+      image:
+        'https://images.unsplash.com/photo-1519864600265-abb23847ef2c?auto=format&fit=crop&w=500&q=80',
+    },
+    {
+      eventName: 'Food Rescue Workshop',
+      venue: 'Jaffna, Sri Lanka',
+      datetime: Date.now() - 1000 * 60 * 60 * 24 * 90, // 90 days ago
+      image:
+        'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=500&q',
+    },
+  ],
 };
 
 const Organization = () => {
@@ -36,7 +66,7 @@ const Organization = () => {
       <View style={styles.organizationHeader}>
         {organizationData.image ? (
           <Image
-            source={organizationData.image}
+            source={{ uri: organizationData.image }}
             style={styles.organizationImage}
           />
         ) : (
@@ -72,12 +102,17 @@ const Organization = () => {
           <Text style={styles.buttonText}>Manage events</Text>
         </TouchableOpacity>
       </View>
-      <OrganizationEvent />
-      <OrganizationEvent />
-      <OrganizationEvent />
-      <OrganizationEvent />
-      <OrganizationEvent />
-      <OrganizationEvent />
+
+      {organizationData.events.map((event, index) => (
+        <OrganizationEvent
+          key={index}
+          image={event.image}
+          eventName={event.eventName}
+          datetime={new Date(event.datetime)}
+          venue={event.venue}
+        />
+      ))}
+
       <View style={styles.heading}>
         <Text style={styles.primaryHeading}>Requests</Text>
         <TouchableOpacity style={styles.button}>
