@@ -14,8 +14,9 @@ import VolunteerLogin from './src/screens/VolunteerLogin';
 import VolunteerSection from './src/screens/VolunteerSection';
 import VolunteerProfile from './src/screens/VolunteerProfile';
 import DonorSignIn from './src/screens/DonorSignIn';
-
 import VolunteerSignUp from './src/screens/VolunteerSignUp';
+import ForgotPassword from './src/screens/ForgotPasswordDonor';
+import DonorProfile from './src/screens/DonorProfile';
 
 const RootStack = createNativeStackNavigator({
   initialRouteName: 'home',
@@ -29,6 +30,8 @@ const RootStack = createNativeStackNavigator({
     createEvent: CreateEvent,
     donorSignUp: DonorSignUp,
     donorSignIn: DonorSignIn,
+    forgotPassword: ForgotPassword,
+    donorProfile: DonorProfile,
     volunteerSignUp : VolunteerSignUp,
     volunteerLogin : VolunteerLogin,
     volunteerSection : VolunteerSection,
