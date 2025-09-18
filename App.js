@@ -15,6 +15,11 @@ import VolunteerSection from './src/screens/VolunteerSection';
 import VolunteerProfile from './src/screens/VolunteerProfile';
 import DonorSignIn from './src/screens/DonorSignIn';
 import VolunteerSignUp from './src/screens/VolunteerSignUp';
+import CreateFoodRequest from './src/screens/CreateFoodRequest';
+import FoodRequestMgtNav from './src/screens/FoodRequestMgtNav';
+import DisplayFoodRequest from './src/screens/DisplayFoodRequest';
+import DisplayRequestAdminInterface from './src/screens/DisplayRequestsAdminInterface';
+import FoodRequestListScreen from './src/screens/FoodRequestListScreen';
 import ForgotPassword from './src/screens/ForgotPasswordDonor';
 import DonorProfile from './src/screens/DonorProfile';
 
@@ -36,6 +41,11 @@ const RootStack = createNativeStackNavigator({
     volunteerLogin : VolunteerLogin,
     volunteerSection : VolunteerSection,
     volunteerProfile : VolunteerProfile,
+    createFoodRequest: CreateFoodRequest,
+    foodRequestMgtNav:FoodRequestMgtNav,
+    displayFoodRequest:DisplayFoodRequest,
+    displayRequestAdminInterface:DisplayRequestAdminInterface,
+    foodRequestListScreen:FoodRequestListScreen
   },
 });
 
