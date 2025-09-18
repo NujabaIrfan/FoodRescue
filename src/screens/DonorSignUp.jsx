@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import Toast from 'react-native-toast-message';
@@ -19,6 +20,7 @@ import {
   createUserWithEmailAndPassword,
   sendEmailVerification,
 } from 'firebase/auth';
+import * as ImagePicker from 'expo-image-picker';
 
 const DonorSignUp = () => {
   const navigation = useNavigation();
@@ -30,9 +32,14 @@ const DonorSignUp = () => {
     address: '',
     phone: '',
     email: '',
+    description: '',
+    hours: '',
+    cuisine: '',
   });
 
+  const [imageUri, setImageUri] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     navigation.setOptions({
@@ -49,6 +56,36 @@ const DonorSignUp = () => {
       },
     });
   }, [navigation]);
+
+  // Step 1: Update the pickImage function to use Base64
+  const pickImage = async () => {
+    try {
+      // Request permissions
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        showToast('error', 'Permission required', 'Please grant camera roll permissions to upload images');
+        return;
+      }
+
+      // Launch image picker
+      let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.5, // Reduce quality to make file size smaller
+        base64: true, // This is important - get image as base64
+      });
+
+      if (!result.canceled) {
+        // Convert image to base64 string
+        const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
+        setImageUri(base64Image);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      showToast('error', 'Error', 'Failed to pick image');
+    }
+  };
 
   const handleChange = (field, value) => {
     setForm({ ...form, [field]: value });
@@ -68,7 +105,7 @@ const DonorSignUp = () => {
     const { username, password, name, address, phone, email } = form;
 
     if (!username || !password || !name || !address || !phone || !email) {
-      showToast('error', 'Missing Fields', 'Please fill in all fields.');
+      showToast('error', 'Missing Fields', 'Please fill in all required fields.');
       return false;
     }
 
@@ -103,6 +140,7 @@ const DonorSignUp = () => {
     return true;
   };
 
+  // Step 2: Update the handleRegister function to save Base64 image
   const handleRegister = async () => {
     if (!validateForm()) return;
 
@@ -118,10 +156,10 @@ const DonorSignUp = () => {
 
       const user = cred.user;
 
-      // ✅ Send verification email (no custom URL to avoid errors)
+      // ✅ Send verification email
       await sendEmailVerification(user);
 
-      // ✅ Save donor profile in Firestore
+      // ✅ Save donor profile in Firestore with Base64 image
       await addDoc(collection(db, 'restaurant'), {
         uid: user.uid,
         role: 'donor',
@@ -130,7 +168,10 @@ const DonorSignUp = () => {
         address: form.address.trim(),
         phone: form.phone.trim(),
         email: form.email.trim(),
-        isVerified: false,
+        description: form.description.trim(),
+        hours: form.hours.trim(),
+        cuisine: form.cuisine.trim(),
+        imageUrl: imageUri, // This now contains the base64 string
         createdAt: serverTimestamp(),
       });
 
@@ -148,7 +189,16 @@ const DonorSignUp = () => {
         address: '',
         phone: '',
         email: '',
+        description: '',
+        hours: '',
+        cuisine: '',
       });
+      setImageUri(null);
+
+      setTimeout(() => {
+        navigation.navigate('donorSignIn');
+      }, 2000);
+      
     } catch (error) {
       console.error('Registration error:', error);
       let message = 'Something went wrong. Please try again.';
@@ -182,6 +232,28 @@ const DonorSignUp = () => {
         </View>
 
         <View style={styles.formContainer}>
+          {/* Restaurant Image Upload */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Restaurant Image</Text>
+            <TouchableOpacity 
+              style={styles.imageUploadButton}
+              onPress={pickImage}
+              disabled={uploadingImage}
+            >
+              {/* Step 3: Display the Base64 Image - this works the same as before */}
+              {imageUri ? (
+                <Image source={{ uri: imageUri }} style={styles.imagePreview} />
+              ) : uploadingImage ? (
+                <ActivityIndicator color="#389c9a" />
+              ) : (
+                <>
+                  <Icon name="cloud-upload" size={20} color="#389c9a" />
+                  <Text style={styles.imageUploadText}>Upload Image</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+
           {/* Username */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Username *</Text>
@@ -317,6 +389,74 @@ const DonorSignUp = () => {
             </View>
           </View>
 
+          {/* Cuisine Type */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Cuisine Type</Text>
+            <View style={styles.inputWrapper}>
+              <Icon
+                name="restaurant-menu"
+                size={20}
+                color="#389c9a"
+                style={styles.icon}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="e.g., Italian, Chinese, Mexican"
+                placeholderTextColor="#999"
+                value={form.cuisine}
+                selectionColor="#389c9a"
+                onChangeText={(text) => handleChange('cuisine', text)}
+                editable={!isSubmitting}
+              />
+            </View>
+          </View>
+
+          {/* Operating Hours */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Operating Hours</Text>
+            <View style={styles.inputWrapper}>
+              <Icon
+                name="access-time"
+                size={20}
+                color="#389c9a"
+                style={styles.icon}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="e.g., 9:00 AM - 10:00 PM"
+                placeholderTextColor="#999"
+                value={form.hours}
+                selectionColor="#389c9a"
+                onChangeText={(text) => handleChange('hours', text)}
+                editable={!isSubmitting}
+              />
+            </View>
+          </View>
+
+          {/* Restaurant Description */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Restaurant Description</Text>
+            <View style={[styles.inputWrapper, styles.textAreaWrapper]}>
+              <Icon
+                name="description"
+                size={20}
+                color="#389c9a"
+                style={styles.icon}
+              />
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                placeholder="Tell us about your restaurant..."
+                placeholderTextColor="#999"
+                value={form.description}
+                selectionColor="#389c9a"
+                onChangeText={(text) => handleChange('description', text)}
+                editable={!isSubmitting}
+                multiline
+                numberOfLines={4}
+              />
+            </View>
+          </View>
+
           {/* Register Button */}
           <TouchableOpacity
             style={[styles.button, isSubmitting && styles.buttonDisabled]}
@@ -333,7 +473,7 @@ const DonorSignUp = () => {
           {/* Redirect to Login */}
           <View style={styles.loginRedirect}>
             <Text style={styles.loginText}>Already have an account? </Text>
-             <TouchableOpacity onPress={() => navigation.navigate('donorSignIn')}>
+            <TouchableOpacity onPress={() => navigation.navigate('donorSignIn')}>
               <Text style={styles.loginLink}>Sign In Here</Text>
             </TouchableOpacity>
           </View>
@@ -383,13 +523,42 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e0e0e0',
   },
+  textAreaWrapper: {
+    alignItems: 'flex-start',
+    paddingTop: 12,
+  },
   icon: { marginRight: 10 },
   input: { flex: 1, fontSize: 16, paddingVertical: 12, color: '#333' },
+  textArea: {
+    minHeight: 100,
+    textAlignVertical: 'top',
+  },
   passwordHint: {
     fontSize: 12,
     color: '#666',
     marginTop: 5,
     fontStyle: 'italic',
+  },
+  imageUploadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 15,
+    borderWidth: 1,
+    borderColor: '#389c9a',
+    borderStyle: 'dashed',
+    borderRadius: 8,
+    backgroundColor: '#f0f9f8',
+  },
+  imageUploadText: {
+    marginLeft: 10,
+    color: '#389c9a',
+    fontWeight: 'bold',
+  },
+  imagePreview: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
   },
   button: {
     backgroundColor: '#389c9a',
