@@ -22,6 +22,7 @@ import DisplayRequestAdminInterface from './src/screens/DisplayRequestsAdminInte
 import FoodRequestListScreen from './src/screens/FoodRequestListScreen';
 import ForgotPassword from './src/screens/ForgotPasswordDonor';
 import DonorProfile from './src/screens/DonorProfile';
+import Surplus from './src/screens/Surplus';
 
 const RootStack = createNativeStackNavigator({
   initialRouteName: 'home',
@@ -45,7 +46,8 @@ const RootStack = createNativeStackNavigator({
     foodRequestMgtNav:FoodRequestMgtNav,
     displayFoodRequest:DisplayFoodRequest,
     displayRequestAdminInterface:DisplayRequestAdminInterface,
-    foodRequestListScreen:FoodRequestListScreen
+    foodRequestListScreen:FoodRequestListScreen,
+    surplus:Surplus,
   },
 });
 

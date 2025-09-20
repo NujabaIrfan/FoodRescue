@@ -34,6 +34,7 @@ import {
   deleteUser,
   sendPasswordResetEmail
 } from 'firebase/auth';
+import * as ImagePicker from 'expo-image-picker';
 
 const DonorProfile = () => {
   const navigation = useNavigation();
@@ -49,7 +50,7 @@ const DonorProfile = () => {
     cuisine: '',
     imageUrl: '',
   });
-
+  
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -60,6 +61,7 @@ const DonorProfile = () => {
   const [deletePassword, setDeletePassword] = useState('');
   const [userDocId, setUserDocId] = useState(null);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     navigation.setOptions({
@@ -74,10 +76,55 @@ const DonorProfile = () => {
         fontWeight: 'bold',
         fontSize: 20,
       },
+      headerRight: () => (
+        <TouchableOpacity
+          onPress={() => navigation.navigate('surplus')}
+          style={styles.headerButton}
+        >
+          <Text style={styles.headerButtonText}>Surplus</Text>
+        </TouchableOpacity>
+      ),
     });
 
     fetchUserData();
   }, [navigation]);
+
+  // Updated pickImage function to use Base64 (from first file)
+  const pickImage = async () => {
+    try {
+      // Request permissions
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        showToast('error', 'Permission required', 'Please grant camera roll permissions to upload images');
+        return;
+      }
+
+      // Launch image picker
+      let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.5, // Reduce quality to make file size smaller
+        base64: true, // This is important - get image as base64
+      });
+
+      if (!result.canceled) {
+        setUploadingImage(true);
+        
+        // Convert image to base64 string
+        const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
+        
+        // Update the form data with the base64 image
+        setForm({ ...form, imageUrl: base64Image });
+        setUploadingImage(false);
+        showToast('success', 'Success', 'Image selected successfully');
+      }
+    } catch (error) {
+      console.error('Error selecting image:', error);
+      setUploadingImage(false);
+      showToast('error', 'Error', 'Failed to select image');
+    }
+  };
 
   const fetchUserData = async () => {
     try {
@@ -160,6 +207,7 @@ const DonorProfile = () => {
     return true;
   };
 
+  // Updated handleUpdateProfile to save Base64 image (from first file)
   const handleUpdateProfile = async () => {
     if (!validateForm()) return;
 
@@ -178,7 +226,7 @@ const DonorProfile = () => {
         description: form.description.trim(),
         hours: form.hours.trim(),
         cuisine: form.cuisine.trim(),
-        imageUrl: form.imageUrl,
+        imageUrl: form.imageUrl, // This now contains the base64 string
       });
 
       showToast('success', 'Success', 'Profile updated successfully');
@@ -369,7 +417,12 @@ const DonorProfile = () => {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <View style={styles.avatarContainer}>
+          <TouchableOpacity 
+            style={styles.avatarContainer}
+            onPress={isEditing ? pickImage : null}
+            disabled={!isEditing || uploadingImage}
+          >
+            {/* Display the Base64 Image - works the same as before */}
             {form.imageUrl ? (
               <Image source={{ uri: form.imageUrl }} style={styles.avatar} />
             ) : (
@@ -377,7 +430,16 @@ const DonorProfile = () => {
                 <Icon name="restaurant" size={40} color="#fff" />
               </View>
             )}
-          </View>
+            {isEditing && (
+              <View style={styles.cameraIcon}>
+                {uploadingImage ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Icon name="camera-alt" size={16} color="#fff" />
+                )}
+              </View>
+            )}
+          </TouchableOpacity>
           <Text style={styles.title}>
             {form.name ? `Welcome, ${form.name}!` : 'Complete Your Profile'}
           </Text>
@@ -392,6 +454,29 @@ const DonorProfile = () => {
         )}
 
         <View style={styles.formContainer}>
+          {/* Restaurant Image Upload */}
+          {isEditing && (
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Restaurant Image</Text>
+              <TouchableOpacity 
+                style={styles.imageUploadButton}
+                onPress={pickImage}
+                disabled={uploadingImage}
+              >
+                {form.imageUrl ? (
+                  <Image source={{ uri: form.imageUrl }} style={styles.imagePreview} />
+                ) : uploadingImage ? (
+                  <ActivityIndicator color="#389c9a" />
+                ) : (
+                  <>
+                    <Icon name="cloud-upload" size={20} color="#389c9a" />
+                    <Text style={styles.imageUploadText}>Upload Image</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
+
           {/* Username */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Username *</Text>
@@ -776,6 +861,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  cameraIcon: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#389c9a',
+    borderRadius: 12,
+    padding: 6,
+  },
   formContainer: {
     backgroundColor: '#fff',
     borderRadius: 15,
@@ -822,6 +915,27 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 5,
     fontStyle: 'italic',
+  },
+  imageUploadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 15,
+    borderWidth: 1,
+    borderColor: '#389c9a',
+    borderStyle: 'dashed',
+    borderRadius: 8,
+    backgroundColor: '#f0f9f8',
+  },
+  imageUploadText: {
+    marginLeft: 10,
+    color: '#389c9a',
+    fontWeight: 'bold',
+  },
+  imagePreview: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
   },
   buttonGroup: {
     flexDirection: 'row',
@@ -933,6 +1047,17 @@ const styles = StyleSheet.create({
   forgotPasswordText: {
     color: '#389c9a',
     textDecorationLine: 'underline',
+  },
+  headerButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginRight: 10,
+  },
+  headerButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
 });
 
