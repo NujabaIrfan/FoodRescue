@@ -66,7 +66,7 @@ const RestaurantCard = ({ restaurant, onPress }) => {
         </View>
 
         <View style={styles.actionButtons}>
-          <TouchableOpacity style={styles.button}>
+          <TouchableOpacity style={styles.button} onPress={onPress}>
             <Text style={styles.buttonText}>View Available Donations</Text>
           </TouchableOpacity>
           {restaurant.phone && (

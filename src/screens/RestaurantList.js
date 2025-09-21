@@ -197,13 +197,24 @@ const RestaurantList = () => {
           </Text>
         </View>
       ) : (
-        <FlatList
-          data={filteredRestaurants}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <RestaurantCard restaurant={item} />}
-          contentContainerStyle={styles.list}
-          showsVerticalScrollIndicator={false}
-        />
+       <FlatList
+  data={filteredRestaurants}
+  keyExtractor={(item) => item.id}
+  renderItem={({ item }) => (
+    <RestaurantCard
+      restaurant={item}
+      onPress={() =>
+        navigation.navigate('surplusList', {
+          providerId: item.id,
+          providerName: item.name,
+        })
+      }
+    />
+  )}
+  contentContainerStyle={styles.list}
+  showsVerticalScrollIndicator={false}
+/>
+
       )}
     </View>
   );

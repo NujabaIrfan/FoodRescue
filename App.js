@@ -23,6 +23,7 @@ import FoodRequestListScreen from './src/screens/FoodRequestListScreen';
 import ForgotPassword from './src/screens/ForgotPasswordDonor';
 import DonorProfile from './src/screens/DonorProfile';
 import Surplus from './src/screens/Surplus';
+import SurplusList from './src/screens/SurplusList';
 
 const RootStack = createNativeStackNavigator({
   initialRouteName: 'home',
@@ -48,6 +49,7 @@ const RootStack = createNativeStackNavigator({
     displayRequestAdminInterface:DisplayRequestAdminInterface,
     foodRequestListScreen:FoodRequestListScreen,
     surplus:Surplus,
+    surplusList:SurplusList,
   },
 });
 
