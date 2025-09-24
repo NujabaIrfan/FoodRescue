@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@expo/metro-runtime": "~5.0.4",
+    "@google/generative-ai": "^0.24.1",
     "@maplibre/maplibre-react-native": "^10.2.1",
     "@react-native-community/datetimepicker": "^8.4.5",
     "@react-native-picker/picker": "^2.11.2",
@@ -21,6 +22,7 @@
     "bcrypt": "^6.0.0",
     "expo": "~53.0.20",
     "expo-barcode-scanner": "^13.0.1",
+    "expo-camera": "~16.1.11",
     "expo-checkbox": "~4.1.4",
     "expo-image-picker": "~16.1.4",
     "expo-status-bar": "~2.2.3",
@@ -32,6 +34,7 @@
     "react-native-bcrypt": "^2.4.0",
     "react-native-dotenv": "^3.4.11",
     "react-native-elements": "^3.4.3",
+    "react-native-gifted-chat": "^2.8.1",
     "react-native-image-picker": "^8.2.1",
     "react-native-paper": "^5.14.5",
     "react-native-popup-menu": "^0.18.0",
@@ -41,8 +44,7 @@
     "react-native-ui-datepicker": "^3.1.2",
     "react-native-vector-icons": "^10.3.0",
     "react-native-web": "^0.20.0",
-    "react-native-webview": "13.13.5",
-    "expo-camera": "~16.1.11"
+    "react-native-webview": "13.13.5"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

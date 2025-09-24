@@ -67,6 +67,16 @@ const FoodRequestMgtNav = () => {
         >
           <Text style={styles.buttonOutlineText}>View All Requests</Text>
         </TouchableOpacity>
+      
+
+      {/* chatbotScreen */}
+      {/* temporary button */}
+      <TouchableOpacity
+          onPress={()=>navigation.navigate('chatbotScreen')}
+          style={[styles.button, styles.buttonOutline]}
+        >
+          <Text style={styles.buttonOutlineText}>Chatbot</Text>
+        </TouchableOpacity>
       </View>
 
 
