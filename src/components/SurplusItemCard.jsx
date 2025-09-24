@@ -1,12 +1,16 @@
+import { useNavigation } from '@react-navigation/native';
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 const SurplusItemCard = ({ item }) => {
+
+  const navigation=useNavigation();
+
   const handleRequestPress = () => {
-    // Implement your logic for handling a food request here.
-    // This could involve navigating to a form, showing a confirmation modal,
-    // or sending a request to your Firestore database.
+    navigation.navigate('createFoodRequest',{
+      item: item.name
+    });
     console.log(`Food request button pressed for item: ${item.name}`);
   };
 
