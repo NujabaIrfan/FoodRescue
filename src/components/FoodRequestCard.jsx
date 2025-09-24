@@ -1,7 +1,9 @@
+import { useNavigation } from "@react-navigation/native";
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 
 const FoodRequestCard = ({ request, onPress }) => {
+  const navigation = useNavigation();
   const formatDate = (dateString) => {
     if (!dateString) return "Not specified";
     try {
@@ -43,6 +45,9 @@ const FoodRequestCard = ({ request, onPress }) => {
   return (
     <TouchableOpacity
       style={styles.card}
+      onPress={() => {
+      navigation.navigate('displayFoodRequest', { requestId: request.id });
+  }}
     >
       <View style={styles.cardHeader}>
         <Text style={styles.requestItemName} numberOfLines={1}>
