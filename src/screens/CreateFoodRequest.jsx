@@ -13,9 +13,11 @@ import DateTimePicker from 'react-native-ui-datepicker';
 import { auth, db } from '../../firebaseConfig';
 import { collection, addDoc } from 'firebase/firestore';
 import { Timestamp } from 'firebase/firestore';
+import { useNavigation } from '@react-navigation/native';
 
 const CreateFoodRequest = ({ route }) => {
   const passedItem = route?.params?.item;
+  const navigation=useNavigation();
   const [orgName, setOrgName] = useState('ABC Organization');
   const [orgID, setOrgID] = useState('ORG3562');
   const [requestedBy, setRequestedBy] = useState('John Doe');
@@ -78,12 +80,15 @@ const CreateFoodRequest = ({ route }) => {
         pickupTime: Timestamp.fromDate(pickupTime),
         status: 'Pending',
       },
+
+      
     };
 
     try {
       await addDoc(collection(db, 'foodRequests'), requestData);
 
       Alert.alert('Success', 'Food request created successfully');
+      navigation.navigate('foodRequestListScreen');
     } catch (error) {
       console.error('Error adding document: ', error);
       Alert.alert('Error', 'Something went wrong');
