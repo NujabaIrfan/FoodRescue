@@ -9,8 +9,11 @@ import {
 import Icon from 'react-native-vector-icons/FontAwesome6';
 import DonationRequest from '../components/DonationRequest';
 import OrganizationEvent from '../components/OrganizationEvent';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../firebaseConfig';
+import Toast from 'react-native-toast-message';
 
 const dummyData = {
   name: 'Green Plate',
@@ -55,11 +58,42 @@ const dummyData = {
   ],
 };
 
-const Organization = () => {
-  const organizationData = dummyData;
+const Organization = ({ route }) => {  
   const navigator = useNavigation();
-  const [isShowingFullDescription, setIsShowingFullDescription] =
-    useState(false);
+  const [organizationData, setOrganizationData] = useState(null)
+  const [isShowingFullDescription, setIsShowingFullDescription] = useState(false);
+  const [isFetchError, setIsFetchError] = useState(false)
+  console.log(route.params)
+  const { id } = route.params
+  if (!id) return (
+    <View>
+      <Text>What</Text>
+    </View>
+  )
+
+  useEffect(() => {
+    (async () => {
+      let res = await getDoc(doc(db, "Organizations", id))
+      if (!res) return setIsFetchError(true)
+      let data = res.data()
+      setOrganizationData({
+        name: data.name,
+        description: data.description,
+        image: data.image,
+        orgDetails: {
+          createdDate: data.createdDate
+        },
+        events: []
+      })
+    })()
+  }, [])
+
+  if (isFetchError) return Toast.show({
+    type: "error",
+    text1: "Cannot fetch the organization"
+  });
+  
+  if (!organizationData) return // initial render (before fetch)
 
   return (
     <ScrollView style={styles.content}>
@@ -76,12 +110,10 @@ const Organization = () => {
           <Text style={styles.primaryHeading}>{organizationData.name}</Text>
           <Text style={styles.infoText}>
             Created on{' '}
-            {new Date(
-              organizationData.orgDetails.createdDate
-            ).toLocaleDateString()}
+            {organizationData.orgDetails.createdDate.toDate().toLocaleDateString()}
           </Text>
           <Text style={styles.infoText}>
-            {organizationData.orgDetails.memberCount} members
+            {organizationData.orgDetails.memberCount || 0} members
           </Text>
         </View>
       </View>
