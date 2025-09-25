@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Keyboard,
   ScrollView,
@@ -12,6 +12,8 @@ import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
 import FontAwesome6Icon from 'react-native-vector-icons/FontAwesome6';
 import OrganizationCard from '../components/OrganizationCard';
 import { useNavigation } from '@react-navigation/native';
+import { db } from '../../firebaseConfig';
+import { collection, getDocs, Query } from 'firebase/firestore';
 
 // temporary data
 const dummyData = [
@@ -95,19 +97,31 @@ const organizationSearchMode = {
 
 const Organizations = () => {
   const navigator = useNavigation();
+  const [organizationsData, setOrganizationsData] = useState([])
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState(organizationSearchMode.ALL);
-  let organizationData = dummyData;
-  organizationData = organizationData.filter((org) =>
-    org.name.toLowerCase().includes(searchQuery.trim().toLowerCase())
-  );
 
-  const myOrganizations = organizationData.filter(
-    (organization) => !!organization.joinedDetails
-  );
-  const otherOrganizations = organizationData.filter(
-    (organization) => !organization.joinedDetails
-  );
+  useEffect(() => {
+    (async () => {
+      let data = await getDocs(collection(db, "Organizations"));
+      setOrganizationsData(data.docs.map(doc => {
+        let d = doc.data()
+        return {
+          name: d.name,
+          image: d.image,
+          id: doc.id,
+          orgDetails: {
+            createdDate: d.createdDate
+          }
+        }
+      }))
+    })()
+  }, [])
+
+
+  const myOrganizations = []
+  const otherOrganizations = organizationsData.filter((org) =>
+    org.name.toLowerCase().includes(searchQuery.trim().toLowerCase()));
 
   const clearSearch = () => {
     setSearchQuery('');
@@ -210,7 +224,8 @@ const Organizations = () => {
                 key={index}
                 name={org.name}
                 image={org.image}
-                joinedDetails={org.joinedDetails}
+                id={org.id}
+                joinedDetails={org.joinedDetails || {}}
                 orgDetails={org.orgDetails}
               />
             ))}
@@ -233,7 +248,8 @@ const Organizations = () => {
                 key={index}
                 name={org.name}
                 image={org.image}
-                orgDetails={org.orgDetails}
+                id={org.id}
+                orgDetails={org.orgDetails || {}}
               />
             ))}
           </View>

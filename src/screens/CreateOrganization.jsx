@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 
 import { launchImageLibrary } from 'react-native-image-picker';
-import { addDoc, collection } from 'firebase/firestore';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import Toast from 'react-native-toast-message';
 
 export default function CreateOrganization() {
@@ -46,7 +46,13 @@ export default function CreateOrganization() {
       text1: "Please provide a valid description for your organization",
       position: "top"
     })
-    await addDoc(collection(db, "Organizations"), { name, description, image, user: currentUser.uid })
+    await addDoc(collection(db, "Organizations"), {
+      name,
+      description,
+      image,
+      createdDate: serverTimestamp(),
+      user: currentUser.uid
+    })
   }
 
   return (
