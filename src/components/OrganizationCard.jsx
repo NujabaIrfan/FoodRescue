@@ -1,9 +1,17 @@
+import { useNavigation } from '@react-navigation/native';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome6';
 
-const OrganizationCard = ({ name, image, joinedDetails, orgDetails }) => {
+const OrganizationCard = ({ name, image, joinedDetails, orgDetails, id }) => {
+
+  const navigator = useNavigation()
+
   return (
-    <View style={styles.card}>
+    <TouchableOpacity
+      style={styles.card}
+      onPress={() => navigator.navigate("organization", { id })}
+      activeOpacity={0.8}
+      >
       <View style={styles.organization}>
         <View style={styles.organizationDetails}>
           {image ? (
@@ -27,11 +35,11 @@ const OrganizationCard = ({ name, image, joinedDetails, orgDetails }) => {
             ) : (
               <View>
                 <Text style={styles.infoText}>
-                  {orgDetails.memberCount} members
+                  {orgDetails.memberCount || 0} members
                 </Text>
                 <Text style={styles.infoText}>
                   Created on{' '}
-                  {new Date(orgDetails.createdDate).toLocaleDateString()}
+                  {orgDetails.createdDate.toDate().toLocaleDateString()}
                 </Text>
               </View>
             )}
@@ -45,7 +53,7 @@ const OrganizationCard = ({ name, image, joinedDetails, orgDetails }) => {
           )}
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 
