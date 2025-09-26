@@ -1,17 +1,37 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import Toast from 'react-native-toast-message';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../../firebaseConfig';
+import { db, auth } from '../../firebaseConfig';
+import { doc, getDoc } from 'firebase/firestore';
 
 export default function VolunteerLogin() {
   const navigation = useNavigation();
+  const route = useRoute();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Handle success message from signup navigation
+  useEffect(() => {
+    if (route.params?.signupSuccess) {
+      Toast.show({
+        type: 'success',
+        text1: 'Welcome!',
+        text2: route.params.message || 'Account created successfully! Please verify your email before logging in.',
+        position: 'top',
+        visibilityTime: 4000
+      });
+      
+      // Pre-fill email if coming from signup
+      if (route.params.email) {
+        setEmail(route.params.email);
+      }
+    }
+  }, [route.params]);
 
   const handleLogin = async() => {
     if(!email || !password){
@@ -27,28 +47,84 @@ export default function VolunteerLogin() {
     setLoading(true);
 
     try{
-      await signInWithEmailAndPassword(auth, email, password);
-      console.log("User Logged in Successfully");
-      Toast.show({
-        type: 'success',
-        text1: 'User Logged in Successfully',
-        position: 'top'
-      });
-      navigation.navigate('volunteerSection');
-    }catch(error){
-      console.log(error.message);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // Check if email is verified
+      if (!user.emailVerified) {
+        Toast.show({
+          type: 'error',
+          text1: 'Email Not Verified',
+          text2: 'Please verify your email address before logging in.',
+          position: 'top'
+        });
+        await auth.signOut();
+        setLoading(false);
+        return;
+      }
+
+      const docRef = doc(db, "Volunteers", user.uid);
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        Toast.show({
+          type: 'success',
+          text1: 'Volunteer Logged in Successfully',
+          position: 'top'
+        });
+        navigation.navigate('volunteerSection');
+      } else {
+        // Not a volunteer → block access
+        Toast.show({
+          type: 'error',
+          text1: 'Access Denied',
+          text2: 'This account is not registered as a Volunteer.',
+          position: 'top'
+        });
+        await auth.signOut();
+      }
+    } catch(error) {
+      console.log('Login Error:', error.message);
+      
+      let errorMessage = 'Login unsuccessful. Please try again.';
+      
+      // Handle specific Firebase auth errors
+      switch(error.code) {
+        case 'auth/invalid-email':
+          errorMessage = 'The email address is invalid.';
+          break;
+        case 'auth/user-disabled':
+          errorMessage = 'This account has been disabled.';
+          break;
+        case 'auth/user-not-found':
+          errorMessage = 'No account found with this email.';
+          break;
+        case 'auth/wrong-password':
+          errorMessage = 'Incorrect password. Please try again.';
+          break;
+        case 'auth/too-many-requests':
+          errorMessage = 'Too many failed attempts. Please try again later.';
+          break;
+        case 'auth/network-request-failed':
+          errorMessage = 'Network error. Please check your internet connection.';
+          break;
+      }
+      
       Toast.show({
         type: 'error',
-        text1: 'Logged in Unsuccessfull. Please try again',
+        text1: 'Login Failed',
+        text2: errorMessage,
         position: 'top'
       });
+    } finally {
+      setLoading(false);
     }
   }
 
   useEffect(() => {
     navigation.setOptions({
       title: 'Volunteer Login'
-    })
+    });
   }, [navigation]);
 
   return (
@@ -64,7 +140,14 @@ export default function VolunteerLogin() {
           <Text style={styles.label}>Email Address: </Text>
           <View style={styles.inputContainer}>
             <Icon name="email" size={20} color="#6c757d" style={styles.inputIcon} />
-            <TextInput style={styles.input} placeholder="Enter your email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none"/>
+            <TextInput 
+              style={styles.input} 
+              placeholder="Enter your email" 
+              value={email} 
+              onChangeText={setEmail} 
+              keyboardType="email-address" 
+              autoCapitalize="none"
+            />
           </View>
         </View>
 
@@ -72,12 +155,26 @@ export default function VolunteerLogin() {
           <Text style={styles.label}>Password: </Text>
           <View style={styles.inputContainer}>
             <Icon name="lock" size={20} color="#6c757d" style={styles.inputIcon} />
-            <TextInput style={styles.input} placeholder="Enter your password" value={password} onChangeText={setPassword} secureTextEntry/>
+            <TextInput 
+              style={styles.input} 
+              placeholder="Enter your password" 
+              value={password} 
+              onChangeText={setPassword} 
+              secureTextEntry
+            />
           </View>
         </View>
 
-        <TouchableOpacity style={styles.button} onPress={handleLogin}>
-          <Text style={styles.buttonText}>Login Here</Text>
+        <TouchableOpacity 
+          style={[styles.button, loading && styles.buttonDisabled]} 
+          onPress={handleLogin}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>Login Here</Text>
+          )}
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => navigation.navigate('forgotPassword')} style={styles.linkContainer}>
@@ -90,16 +187,25 @@ export default function VolunteerLogin() {
             <Text style={styles.registerLink}>Sign Up</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Additional info for new users */}
+        {route.params?.signupSuccess && (
+          <View style={styles.infoBox}>
+            <Icon name="info" size={18} color="#17a2b8" />
+            <Text style={styles.infoText}>
+              Please check your email inbox and verify your account before logging in.
+            </Text>
+          </View>
+        )}
       </View>
     </KeyboardAvoidingView>
-
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#F5F5DC',
     justifyContent: 'center',
     paddingHorizontal: 20
   },
@@ -107,7 +213,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 20,
-    shadowColor: '#000',
+    shadowColor: '#5A3F2B',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -116,13 +222,13 @@ const styles = StyleSheet.create({
   heading: {
     fontSize: 26,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#5A3F2B',
     textAlign: 'center',
     marginBottom: 5
   },
   subtitle: {
     fontSize: 14,
-    color: '#6c757d',
+    color: '#6B8E23',
     textAlign: 'center',
     marginBottom: 20
   },
@@ -131,17 +237,17 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    color: '#495057',
+    color: '#5A3F2B',
     marginBottom: 5
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#ced4da',
+    borderColor: '#6B8E23',
     borderRadius: 8,
     paddingHorizontal: 10,
-    backgroundColor: '#f1f3f5'
+    backgroundColor: '#F5F5DC'
   },
   inputIcon: {
     marginRight: 8
@@ -149,14 +255,19 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     height: 45,
-    fontSize: 16
+    fontSize: 16,
+    color: '#5A3F2B'
   },
   button: {
-    backgroundColor: '#007bff',
+    backgroundColor: '#4682B4',
     paddingVertical: 14,
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 10
+  },
+  buttonDisabled: {
+    backgroundColor: '#6B8E23',
+    opacity: 0.7
   },
   buttonText: {
     color: '#fff',
@@ -168,21 +279,39 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   linkText: {
-    color: '#007bff',
+    color: '#FFA500',
     fontSize: 14
   },
   registrationContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 15
+    marginTop: 15,
+    alignItems: 'center'
   },
   registerText: {
     fontSize: 14,
-    color: '#495057'
+    color: '#5A3F2B',
+    marginRight: 5
   },
   registerLink: {
     fontSize: 14,
-    color: '#007bff',
+    color: '#DC143C',
     fontWeight: 'bold'
+  },
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F5DC',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 15,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FFA500'
+  },
+  infoText: {
+    fontSize: 12,
+    color: '#5A3F2B',
+    marginLeft: 8,
+    flex: 1
   }
 });
