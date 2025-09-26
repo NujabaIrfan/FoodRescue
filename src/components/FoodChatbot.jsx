@@ -30,8 +30,7 @@ const FoodChatbot = () => {
   const scrollViewRef = useRef();
 
    const genAI = new GoogleGenerativeAI('AIzaSyDDdgezGgd7mTXPVGJkZ9ggzz8ONm6S9K8');
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
   React.useEffect(() => {
     fetchAvailableItems();
   }, []);
