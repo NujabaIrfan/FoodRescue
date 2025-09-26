@@ -30,6 +30,10 @@ export default function VolunteerProfile() {
   const [completedWorkCount, setCompletedWorkCount] = useState(0);
 
   useEffect(() => {
+    navigation.setOptions({ title: 'My Profile' });
+  }, [navigation]);
+  
+  useEffect(() => {
     const fetchVolunteer = async () => {
       try {
         const user = auth.currentUser;
