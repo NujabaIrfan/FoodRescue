@@ -1,11 +1,11 @@
 import React, { useState , useEffect } from 'react';
-import { View, Text, Image, TextInput, TouchableOpacity, ScrollView, StyleSheet, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, Image, TextInput, TouchableOpacity, ScrollView, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { CheckBox } from 'react-native-elements';
 import { launchImageLibrary } from 'react-native-image-picker';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { auth, db, storage } from '../../firebaseConfig';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import Toast from 'react-native-toast-message';
 import { useNavigation } from '@react-navigation/native';
@@ -65,12 +65,31 @@ export default function VolunteerSignUp() {
     });
   }, [navigation]);
 
+  const validatePassword = (password) => {
+    const minLength = 6;
+    if (password.length < minLength) {
+      return `Password must be at least ${minLength} characters long`;
+    }
+    return null;
+  };
+
   const handleSignup = async () => {
-    if(!name || !email || !phone || !password || password !== confirmPassword){
+    if(!name || !email || !phone || !password || !confirmPassword || password !== confirmPassword){
       Toast.show({
         type: 'error',
         text1: 'Error',
         text2: 'Please fill all fields and make sure passwords match.',
+        position: 'top'
+      });
+      return;
+    }
+
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      Toast.show({
+        type: 'error',
+        text1: 'Weak Password',
+        text2: passwordError,
         position: 'top'
       });
       return;
@@ -82,6 +101,9 @@ export default function VolunteerSignUp() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
+      // Send email verification
+      await sendEmailVerification(user);
+      
       const photoURL = profilePhoto || null;
 
       await setDoc(doc(db, "Volunteers", user.uid), {
@@ -93,18 +115,21 @@ export default function VolunteerSignUp() {
         profilePhoto: photoURL || null,
         skills,
         preferredArea,
+        emailVerified: false, // Add this field to track verification status
         createdAt: new Date()
       });
 
       Toast.show({
         type: 'success',
-        text1: 'Success',
-        text2: 'Volunteer account created successfully!',
-        position: 'top'
+        text1: 'Account Created Successfully!',
+        text2: 'A verification email has been sent. Please verify your email.',
+        position: 'top',
+        visibilityTime: 3000
       });
 
-      // Reset fields
+      // Wait for the toast to show, then navigate to login
       setTimeout(() => {
+        // Reset fields
         setName('');
         setEmail('');
         setPhone('');
@@ -115,20 +140,74 @@ export default function VolunteerSignUp() {
         setProfilePhoto(null);
         setSkills({cooking:false, delivery:false, packing:false, driving:false});
         setPreferredArea('');
-      }, 50);
+        
+        // Navigate to login screen with success message
+        navigation.navigate('volunteerLogin', { 
+          signupSuccess: true,
+          message: 'Account created successfully! Please check your email to verify your account before logging in.' 
+        });
+      }, 2000);
 
     } catch(error) {
-      console.error(error.message);
+      console.error('Signup Error:', error.message);
+      
+      let errorMessage = 'An error occurred during signup.';
+      
+      // Handle specific Firebase auth errors
+      switch(error.code) {
+        case 'auth/email-already-in-use':
+          errorMessage = 'This email is already registered. Please use a different email.';
+          break;
+        case 'auth/invalid-email':
+          errorMessage = 'The email address is invalid.';
+          break;
+        case 'auth/weak-password':
+          errorMessage = 'The password is too weak. Please use a stronger password.';
+          break;
+        case 'auth/network-request-failed':
+          errorMessage = 'Network error. Please check your internet connection.';
+          break;
+        case 'auth/operation-not-allowed':
+          errorMessage = 'Email/password accounts are not enabled. Please contact support.';
+          break;
+        default:
+          errorMessage = error.message;
+      }
+      
       Toast.show({
         type: 'error',
-        text1: 'Error',
-        text2: error.message,
+        text1: 'Signup Failed',
+        text2: errorMessage,
         position: 'top'
       });
     } finally {
       setLoading(false);
     }
- };
+  };
+
+  // Add a resend verification email function (optional - can be used elsewhere)
+  const resendVerificationEmail = async () => {
+    const user = auth.currentUser;
+    
+    if (user && !user.emailVerified) {
+      try {
+        await sendEmailVerification(user);
+        Toast.show({
+          type: 'success',
+          text1: 'Verification Email Sent',
+          text2: 'A new verification email has been sent to your email address.',
+          position: 'top'
+        });
+      } catch (error) {
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: 'Failed to send verification email. Please try again.',
+          position: 'top'
+        });
+      }
+    }
+  };
 
   return (
     <KeyboardAvoidingView 
@@ -176,7 +255,7 @@ export default function VolunteerSignUp() {
             <Text style={styles.label}>Password</Text>
             <View style={styles.inputContainer}>
               <Icon name="lock" size={20} color="#6c757d" style={styles.inputIcon} />
-              <TextInput style={styles.input} placeholder="Create a password" value={password} onChangeText={setPassword} secureTextEntry />
+              <TextInput style={styles.input} placeholder="Create a password (min. 6 characters)" value={password} onChangeText={setPassword} secureTextEntry />
             </View>
           </View>
 
@@ -237,13 +316,30 @@ export default function VolunteerSignUp() {
             </View>
           </View>
 
-          <TouchableOpacity style={styles.button} onPress={handleSignup}>
-            <Text style={styles.buttonText}>Create Account</Text>
+          <TouchableOpacity 
+            style={[styles.button, loading && styles.buttonDisabled]} 
+            onPress={handleSignup}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Create Account</Text>
+            )}
           </TouchableOpacity>
           
           <Text style={styles.termsText}>
             By signing up, you agree to our Terms of Service and Privacy Policy
           </Text>
+
+          <TouchableOpacity 
+            style={styles.loginLink}
+            onPress={() => navigation.navigate('volunteerLogin')}
+          >
+            <Text style={styles.loginText}>
+              Already have an account? <Text style={styles.loginLinkText}>Login here</Text>
+            </Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -253,7 +349,7 @@ export default function VolunteerSignUp() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#F5F5DC',
   },
   scrollContainer: {
     padding: 20,
@@ -267,26 +363,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
+    borderBottomColor: '#6B8E23',
   },
   headerTitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#2c3e50',
+    color: '#5A3F2B',
   },
   profileIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: '#6B8E23',
   },
   card: {
     width: '100%',
     backgroundColor: '#fff',
     borderRadius: 16,
     padding: 24,
-    shadowColor: '#000',
+    shadowColor: '#5A3F2B',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 10,
@@ -297,13 +393,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 8,
     textAlign: 'center',
-    color: '#2c3e50',
+    color: '#5A3F2B',
   },
   subtitle: {
     fontSize: 16,
     textAlign: 'center',
     marginBottom: 30,
-    color: '#7f8c8d',
+    color: '#6B8E23',
   },
   field: {
     marginBottom: 24,
@@ -312,15 +408,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 8,
-    color: '#34495e',
+    color: '#5A3F2B',
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#6B8E23',
     borderRadius: 10,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#F5F5DC',
     overflow: 'hidden',
   },
   inputIcon: {
@@ -331,19 +427,23 @@ const styles = StyleSheet.create({
     height: 50,
     paddingHorizontal: 12,
     fontSize: 16,
-    color: '#2c3e50',
+    color: '#5A3F2B',
   },
   button: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#4682B4',
     paddingVertical: 16,
     borderRadius: 10,
     alignItems: 'center',
     marginTop: 10,
-    shadowColor: '#4CAF50',
+    shadowColor: '#4682B4',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 5,
     elevation: 3,
+  },
+  buttonDisabled: {
+    backgroundColor: '#6B8E23',
+    opacity: 0.7,
   },
   buttonText: {
     color: '#fff',
@@ -359,27 +459,27 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 10,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#F5F5DC',
   },
   imagePlaceholder: {
     width: 80,
     height: 80,
     borderRadius: 10,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#F5F5DC',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#6B8E23',
     borderStyle: 'dashed',
   },
   placeholderText: {
     marginTop: 4,
     fontSize: 12,
     marginLeft: 14,
-    color: '#6c757d',
+    color: '#5A3F2B',
   },
   uploadButton: {
-    backgroundColor: '#2196F3',
+    backgroundColor: '#FFA500',
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
@@ -413,12 +513,24 @@ const styles = StyleSheet.create({
   },
   checkboxText: {
     fontWeight: 'normal',
-    color: '#2c3e50',
+    color: '#5A3F2B',
   },
   termsText: {
     textAlign: 'center',
     marginTop: 20,
     fontSize: 12,
-    color: '#95a5a6',
+    color: '#6B8E23',
+  },
+  loginLink: {
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  loginText: {
+    fontSize: 14,
+    color: '#5A3F2B',
+  },
+  loginLinkText: {
+    color: '#DC143C',
+    fontWeight: '600',
   },
 });
