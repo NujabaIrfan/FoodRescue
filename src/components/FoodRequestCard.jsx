@@ -1,7 +1,9 @@
+import { useNavigation } from "@react-navigation/native";
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 
 const FoodRequestCard = ({ request, onPress }) => {
+  const navigation = useNavigation();
   const formatDate = (dateString) => {
     if (!dateString) return "Not specified";
     try {
@@ -14,13 +16,11 @@ const FoodRequestCard = ({ request, onPress }) => {
 
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
-      case "completed":
+      case "approved":
         return "#28a745";
-      case "in-progress":
-        return "#17a2b8";
       case "pending":
         return "#ffc107";
-      case "cancelled":
+      case "rejected":
         return "#dc3545";
       default:
         return "#6c757d";
@@ -45,16 +45,19 @@ const FoodRequestCard = ({ request, onPress }) => {
   return (
     <TouchableOpacity
       style={styles.card}
+      onPress={() => {
+      navigation.navigate('displayFoodRequest', { requestId: request.id });
+  }}
     >
       <View style={styles.cardHeader}>
-        <Text style={styles.requestId} numberOfLines={1}>
-          ID: {request.id}
+        <Text style={styles.requestItemName} numberOfLines={1}>
+          Item: {request.foodRequest?.items?.[0]?.item || "N/A"}
         </Text>
 
         <View
           style={[
             styles.statusBadge,
-            { backgroundColor: getStatusColor(request.status) },
+            { backgroundColor: getStatusColor(request.foodRequest?.status) },
           ]}
         ></View>
       </View>
@@ -85,14 +88,14 @@ const FoodRequestCard = ({ request, onPress }) => {
           </View>
         </View>
 
-        {request.foodRequest?.items && request.foodRequest.items.length > 0 && (
+        
           <View style={styles.cardRow}>
-            <Text style={styles.cardLabel}>Items:</Text>
+            <Text style={styles.cardLabel}>Status:</Text>
             <Text style={styles.cardValue}>
-              {request.foodRequest.items.length} item(s)
+              {request.foodRequest?.status} 
             </Text>
           </View>
-        )}
+        
 
         <View style={styles.cardRow}>
           <Text style={styles.cardLabel}>Requested By:</Text>
@@ -131,7 +134,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 12,
   },
-  requestId: {
+  requestItemName: {
     fontSize: 14,
     fontWeight: "bold",
     color: "#333",

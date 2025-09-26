@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,21 +7,29 @@ import {
   ScrollView,
   StyleSheet,
   Alert,
-} from "react-native";
-import { Picker } from "@react-native-picker/picker";
-import DateTimePicker from "react-native-ui-datepicker";
+} from 'react-native';
+import { Picker } from '@react-native-picker/picker';
+import DateTimePicker from 'react-native-ui-datepicker';
 import { auth, db } from '../../firebaseConfig';
-import { collection, addDoc } from "firebase/firestore";
-import { Timestamp } from "firebase/firestore";
+import { collection, addDoc } from 'firebase/firestore';
+import { Timestamp } from 'firebase/firestore';
+import { useNavigation } from '@react-navigation/native';
 
-const CreateFoodRequest = () => {
-  const [orgName, setOrgName] = useState("ABC Organization");
-  const [orgID, setOrgID] = useState("ORG3562");
-  const [requestedBy, setRequestedBy] = useState("John Doe");
+const CreateFoodRequest = ({ route }) => {
+  const passedItem = route?.params?.item;
+  const navigation=useNavigation();
+  const [orgName, setOrgName] = useState('ABC Organization');
+  const [orgID, setOrgID] = useState('ORG3562');
+  const [requestedBy, setRequestedBy] = useState('John Doe');
 
-  const [foodItems, setFoodItems] = useState([{ item: "", amount: "1" }]);
+  const [foodItems, setFoodItems] = useState([
+    {
+      item: passedItem || '',
+      amount: '1',
+    },
+  ]);
   const [requiredBefore, setRequiredBefore] = useState(new Date());
-  const [priority, setPriority] = useState("Medium");
+  const [priority, setPriority] = useState('Medium');
   const [pickupDate, setPickupDate] = useState(new Date());
   const [pickupTime, setPickupTime] = useState(new Date());
 
@@ -30,7 +38,7 @@ const CreateFoodRequest = () => {
   const [showPickupTime, setShowPickupTime] = useState(false);
 
   const addFoodItem = () => {
-    setFoodItems([...foodItems, { item: "", amount: "1" }]);
+    setFoodItems([...foodItems, { item: '', amount: '1' }]);
   };
 
   const updateFoodItem = (index, field, value) => {
@@ -48,13 +56,13 @@ const CreateFoodRequest = () => {
 
   const handleCreateRequest = async () => {
     if (!orgName || !orgID || !requestedBy) {
-      Alert.alert("Error", "Please fill in all organization details");
+      Alert.alert('Error', 'Please fill in all organization details');
       return;
     }
 
     const hasEmptyItems = foodItems.some((item) => !item.item);
     if (hasEmptyItems) {
-      Alert.alert("Error", "Please fill in all food items");
+      Alert.alert('Error', 'Please fill in all food items');
       return;
     }
 
@@ -70,17 +78,20 @@ const CreateFoodRequest = () => {
         priority,
         pickupDate: Timestamp.fromDate(pickupDate),
         pickupTime: Timestamp.fromDate(pickupTime),
-        status: "Pending",
+        status: 'Pending',
       },
+
+      
     };
 
     try {
-      await addDoc(collection(db, "foodRequests"), requestData);
+      await addDoc(collection(db, 'foodRequests'), requestData);
 
-      Alert.alert("Success", "Food request created successfully");
+      Alert.alert('Success', 'Food request created successfully');
+      navigation.navigate('foodRequestListScreen');
     } catch (error) {
-      console.error("Error adding document: ", error);
-      Alert.alert("Error", "Something went wrong");
+      console.error('Error adding document: ', error);
+      Alert.alert('Error', 'Something went wrong');
     }
   };
 
@@ -89,7 +100,7 @@ const CreateFoodRequest = () => {
   };
 
   const formatTime = (date) => {
-    return date.toLocaleDateString([], { hour: "2-digit", minute: "2-digit" });
+    return date.toLocaleDateString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   return (
@@ -141,29 +152,35 @@ const CreateFoodRequest = () => {
                 <TextInput
                   style={[styles.input, styles.foodItemInput]}
                   value={item.item}
-                  onChangeText={(value) => updateFoodItem(index, "item", value)}
+                  onChangeText={(value) => updateFoodItem(index, 'item', value)}
                   placeholder="Select or type"
                 />
               </View>
 
               <View style={styles.amountContainer}>
                 <Text style={styles.label}>Amount</Text>
-                <View style={styles.pickerContainer}>
-                  <Picker
-                    selectedValue={item.amount}
-                    onValueChange={(value) =>
-                      updateFoodItem(index, "amount", value)
+                <View style={styles.counterContainer}>
+                  <TouchableOpacity
+                    style={styles.counterButton}
+                    onPress={() =>
+                      updateFoodItem(
+                        index,
+                        'amount',
+                        Math.max(1, parseInt(item.amount) - 1)
+                      )
                     }
-                    style={styles.picker}
                   >
-                    {[...Array(20)].map((_, i) => (
-                      <Picker.Item
-                        key={i + 1}
-                        label={`${i + 1}`}
-                        value={`${i + 1}`}
-                      />
-                    ))}
-                  </Picker>
+                    <Text style={styles.counterText}>-</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.amountValue}>{item.amount}</Text>
+                  <TouchableOpacity
+                    style={styles.counterButton}
+                    onPress={() =>
+                      updateFoodItem(index, 'amount', parseInt(item.amount) + 1)
+                    }
+                  >
+                    <Text style={styles.counterText}>+</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
 
@@ -179,11 +196,11 @@ const CreateFoodRequest = () => {
           ))}
 
           {/* add another item button */}
-          <View>
+          {/* <View>
           <TouchableOpacity style={styles.addButton} onPress={addFoodItem}>
             <Text style={styles.addButtonText}>+ Add another item</Text>
           </TouchableOpacity>
-          </View>
+          </View> */}
 
           {/* Required date */}
           <View style={styles.inputGroup}>
@@ -241,12 +258,12 @@ const CreateFoodRequest = () => {
 
         {/* submit button */}
         <View>
-        <TouchableOpacity
-          style={styles.submitButton}
-          onPress={handleCreateRequest}
-        >
-          <Text style={styles.submitButtonText}>Create Request</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.submitButton}
+            onPress={handleCreateRequest}
+          >
+            <Text style={styles.submitButtonText}>Create Request</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Date, time pickers */}
@@ -291,63 +308,86 @@ const CreateFoodRequest = () => {
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
+  container: {
+    flex: 1,
+  },
+  content: {
+    padding: 20,
+  },
+  section: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
     },
-    content: {
-        padding: 20,
-    },
-    section: {
-        backgroundColor: 'white',
-        borderRadius: 8,
-        padding: 20,
-        marginBottom:20,
-        shadowColor: '#000',
-        shadowOffset:{
-            width: 0,
-            height:2,
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 3.84,
-        elevation: 5,
-    },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 20,
-    },
-    inputGroup: {
-        marginBottom: 15,
-    },
-    inputLabel: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: '#555',
-        marginBottom: 5,
-    },
-    input: {
-        borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 4,
-        padding: 10,
-        fontSize: 14,
-        backgroundColor: '#fff',
-    },
-    submitButton: {
-        backgroundColor: '#106a25ff',
-        paddingVertical: 12,
-        paddingHorizontal:25,
-        borderRadius:8,
-        alignSelf: 'center',
-        marginTop: 20,
-    },
-    submitButtonText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: 'bold'
-    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 20,
+  },
+  inputGroup: {
+    marginBottom: 15,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#555',
+    marginBottom: 5,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 4,
+    padding: 10,
+    fontSize: 14,
+    backgroundColor: '#fff',
+  },
+  submitButton: {
+    backgroundColor: '#106a25ff',
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    borderRadius: 8,
+    alignSelf: 'center',
+    marginTop: 20,
+  },
+  submitButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  amountContainer: {
+    marginVertical: 10,
+  },
+  counterContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  counterButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: "#e0e0e0",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  counterText: {
+    fontSize: 20,
+    fontWeight: "bold",
+  },
+  amountValue: {
+    marginHorizontal: 20,
+    fontSize: 18,
+    fontWeight: "500",
+  },
 });
-
 
 export default CreateFoodRequest;

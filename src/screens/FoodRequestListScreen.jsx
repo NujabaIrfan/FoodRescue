@@ -76,17 +76,19 @@ const FoodRequestListScreen = () => {
   };
 
   const getRequestCounts = () => {
-    const pending = requests.filter((r) => r.status === "pending").length;
-    const approved = requests.filter((r) => r.status === "approved").length;
-    const rejected = requests.filter((r) => r.status === "rejected").length;
-
-    return { pending, approved, rejected, total: requests.length };
-  };
+  const pending = requests.filter((r) => r.foodRequest?.status === "Pending").length;
+  const approved = requests.filter((r) => r.foodRequest?.status === "Approved").length;
+  const rejected = requests.filter((r) => r.foodRequest?.status === "Rejected").length;
+  
+  return { pending, approved, rejected, total: requests.length };
+};
 
   const getFilteredRequests = () => {
-    if (filterStatus === "all") return requests;
-    return requests.filter((request) => request.status === filterStatus);
-  };
+  if (filterStatus === "all") return requests;
+  return requests.filter(
+    (request) => request.foodRequest?.status === filterStatus
+  );
+};
 
   const counts = getRequestCounts();
   const filteredRequests = getFilteredRequests();
@@ -127,7 +129,7 @@ const FoodRequestListScreen = () => {
 
           <TouchableOpacity 
             style={[styles.statItem, filterStatus === 'pending' && styles.activeFilter]} 
-            onPress={() => setFilterStatus('pending')}
+            onPress={() => setFilterStatus('Pending')}
           >
             <Text style={[styles.statNumber, { color: '#ffc107' }, filterStatus === 'pending' && styles.activeStatText]}>
               {counts.pending}
@@ -140,7 +142,7 @@ const FoodRequestListScreen = () => {
 
           <TouchableOpacity 
             style={[styles.statItem, filterStatus === 'rejected' && styles.activeFilter]} 
-            onPress={() => setFilterStatus('rejected')}
+            onPress={() => setFilterStatus('Rejected')}
           >
             <Text style={[styles.statNumber, { color: '#b82f17ff' }, filterStatus === 'rejected' && styles.activeStatText]}>
               {counts.rejected}
@@ -152,7 +154,7 @@ const FoodRequestListScreen = () => {
 
           <TouchableOpacity
             style={[styles.statItem, filterStatus === 'approved' && styles.activeFilter]} 
-            onPress={() => setFilterStatus('approved')}
+            onPress={() => setFilterStatus('Approved')}
           >
             <Text style={[styles.statNumber, { color: '#28a745' }, filterStatus === 'approved' && styles.activeStatText]}>
               {counts.approved}

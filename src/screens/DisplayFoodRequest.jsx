@@ -190,6 +190,14 @@ const DisplayFoodRequest = ({route}) => {
                   {requestData.organization?.requestedBy || "Not specified"}
                 </Text>
               </View>
+
+              {/* status section */}
+              <View>
+            <Text style={styles.label}>Status:</Text>
+            <Text style={styles.value}>
+                  {requestData.foodRequest?.status || "Pending"}
+                </Text>
+                </View>
             </View>
 
             {/* food details */}
@@ -256,11 +264,7 @@ const DisplayFoodRequest = ({route}) => {
               </View>
             </View>
 
-            {/* status section */}
-            <Text style={styles.statusLabel}>Status:</Text>
-            <Text style={styles.value}>
-                  {requestData.foodRequest?.status || "Pending"}
-                </Text>
+            
 
             </View>
           )
