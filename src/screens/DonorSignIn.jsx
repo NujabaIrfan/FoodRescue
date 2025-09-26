@@ -74,46 +74,6 @@ const DonorSignIn = () => {
     return true;
   };
 
-const updateVerificationStatus = async (user) => {
-  try {
-    console.log('Searching for user with email:', user.email);
-    
-    // Search for the user document by email
-    const q = query(
-      collection(db, 'restaurant'), 
-      where('email', '==', user.email)
-    );
-    
-    const querySnapshot = await getDocs(q);
-    console.log('Found documents:', querySnapshot.size);
-    
-    if (!querySnapshot.empty) {
-      querySnapshot.forEach((doc) => {
-        console.log('Document data:', doc.data());
-        console.log('Current isVerified:', doc.data().isVerified);
-      });
-      
-      // Get the first matching document
-      const userDoc = querySnapshot.docs[0];
-      
-      // Update the isVerified field if it's not already true
-      if (!userDoc.data().isVerified) {
-        await updateDoc(userDoc.ref, {
-          isVerified: true,
-          emailVerifiedAt: new Date()
-        });
-        console.log('Verification status updated in Firestore');
-      } else {
-        console.log('User already verified in Firestore');
-      }
-    } else {
-      console.log('No user document found with email:', user.email);
-    }
-  } catch (error) {
-    console.error('Error updating verification status:', error);
-  }
-};
-
   const handleSignIn = async () => {
     if (!validateForm()) return;
 
@@ -129,7 +89,7 @@ const updateVerificationStatus = async (user) => {
 
       const user = cred.user;
 
-      // Check if email is verified
+      // Check if email is verifieda
       if (!user.emailVerified) {
         showToast(
           'error',
@@ -140,11 +100,8 @@ const updateVerificationStatus = async (user) => {
         return;
       }
 
-      // Update Firestore verification status
-      await updateVerificationStatus(user);
-
       showToast('success', 'Welcome Back!', 'Successfully signed in.');
-
+      navigation.navigate('donorProfile');
       // Navigate to donor dashboard or home screen
       // navigation.navigate('DonorDashboard');
       
@@ -226,7 +183,7 @@ const updateVerificationStatus = async (user) => {
           {/* Forgot Password */}
           <TouchableOpacity 
             style={styles.forgotPassword}
-            onPress={() => console.log('Navigate to forgot password')}
+            onPress={() => navigation.navigate('forgotPassword')} // Add this navigation
           >
             <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
           </TouchableOpacity>

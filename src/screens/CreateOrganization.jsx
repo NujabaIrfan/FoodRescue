@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { auth, db } from '../../firebaseConfig';
 import {
   Image,
   StyleSheet,
@@ -10,8 +11,12 @@ import {
 } from 'react-native';
 
 import { launchImageLibrary } from 'react-native-image-picker';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import Toast from 'react-native-toast-message';
 
 export default function CreateOrganization() {
+  const [name, setName] = useState("")
+  const [description, setDescription] = useState("")
   const [image, setImage] = useState(require('../../assets/default-image.jpg'));
 
   const uploadImage = async () => {
@@ -24,18 +29,50 @@ export default function CreateOrganization() {
     if (res.assets.length === 1) setImage(res.assets[0].uri);
   };
 
+  const submit = async () => {
+    const { currentUser } = auth;
+    if (!currentUser) return Toast.show({
+      type: "error",
+      text1: "You must log in to perform this action",
+      position: 'top'
+    });
+    if (!name.trim()) return Toast.show({
+      type: "error",
+      text1: "Please provide a valid name for your organization",
+      position: "top"
+    });
+    if (!description.trim()) return Toast.show({
+      type: "error",
+      text1: "Please provide a valid description for your organization",
+      position: "top"
+    })
+    await addDoc(collection(db, "Organizations"), {
+      name,
+      description,
+      image,
+      createdDate: serverTimestamp(),
+      user: currentUser.uid
+    })
+  }
+
   return (
     <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
       <Text style={styles.primaryHeading}>Set up your organization</Text>
 
       <Text style={styles.label}>Organization name</Text>
-      <TextInput style={styles.input} placeholder="Name" />
+      <TextInput
+        style={styles.input}
+        placeholder="Name"
+        value={name}
+        onChange={(e) => setName(e.target.value)} />
 
       <Text style={styles.label}>Description</Text>
       <TextInput
         style={styles.textarea}
         placeholder="Type here"
         multiline={true}
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
       />
 
       <View style={styles.imageUploadView}>
@@ -51,7 +88,7 @@ export default function CreateOrganization() {
           <Text style={styles.infoText}>Max file size: 2MB</Text>
         </View>
       </View>
-      <TouchableOpacity style={styles.button}>
+      <TouchableOpacity style={styles.button} onPress={submit}>
         <Text style={styles.buttonText}>Create organization</Text>
       </TouchableOpacity>
     </ScrollView>
