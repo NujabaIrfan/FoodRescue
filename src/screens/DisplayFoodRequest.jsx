@@ -262,7 +262,16 @@ const DisplayFoodRequest = ({route}) => {
                   {formatTime(requestData.foodRequest?.pickupTime)}
                 </Text>
               </View>
+
+              
             </View>
+
+            <View>
+                <TouchableOpacity>
+                  <Text>Accept Request</Text>
+                </TouchableOpacity>
+              
+              </View>
 
             
 
