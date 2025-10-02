@@ -31,31 +31,52 @@ const Organizations = () => {
 
   useEffect(() => {
     (async () => {
-      let data = await getDocs(collection(db, "Organizations"));
-      setOrganizationsData(data.docs.map(doc => {
-        let d = doc.data()
-        return {
-          name: d.name,
-          image: d.image,
-          id: doc.id,
-          orgDetails: {
-            founder: d.user,
-            createdDate: d.createdDate,
-            members: d.members,
-            memberCount: d.members?.length || 0
+      const orgSnap = await getDocs(collection(db, "Organizations"))
+
+      const orgs = await Promise.all(
+        orgSnap.docs.map(async (orgDoc) => {
+          const d = orgDoc.data()
+
+          // get members subcollection
+          const membersSnap = await getDocs(collection(db, "Organizations", orgDoc.id, "members"))
+
+          const members = membersSnap.docs.map(m => ({
+            id: m.id,
+            ...m.data()
+          }))
+
+          let joinedDetails = members.find((member) => member.id === currentUser?.uid)
+          joinedDetails = {
+            position: joinedDetails?.role,
+            joinedDate: joinedDetails?.joinedDate?.toDate()
           }
-        }
-      }))
+
+          return {
+            name: d.name,
+            image: d.image,
+            id: orgDoc.id,
+            orgDetails: {
+              founder: d.user,
+              createdDate: d.createdDate,
+              members,
+              memberCount: members.length
+            },
+            joinedDetails
+          }
+        })
+      )
+      setOrganizationsData(orgs)
     })()
   }, [])
 
+
   const searchFilteredOrganizations = organizationsData
-    .filter((org) => org.name.toLowerCase().includes(searchQuery.trim().toLowerCase()));
+    .filter((org) => org?.name?.toLowerCase()?.includes(searchQuery.trim().toLowerCase()));
   const myOrganizations = searchFilteredOrganizations
-    .filter((org) => org.orgDetails.members.includes(currentUser.uid))
+    .filter((org) => (org?.orgDetails?.members || []).some(user => user.id === currentUser.uid))
   const otherOrganizations = searchFilteredOrganizations
-    .filter((org) => !org.orgDetails.members.includes(currentUser.uid))
-    
+    .filter((org) => !(org?.orgDetails?.members || []).some(user => user.id === currentUser.uid))
+
 
   const clearSearch = () => {
     setSearchQuery('');
@@ -98,7 +119,7 @@ const Organizations = () => {
               style={[
                 styles.filterText,
                 viewMode === organizationSearchMode.ALL &&
-                  styles.activeFilterText,
+                styles.activeFilterText,
               ]}
             >
               All
@@ -115,7 +136,7 @@ const Organizations = () => {
               style={[
                 styles.filterText,
                 viewMode === organizationSearchMode.MY &&
-                  styles.activeFilterText,
+                styles.activeFilterText,
               ]}
             >
               My organizations
@@ -132,7 +153,7 @@ const Organizations = () => {
               style={[
                 styles.filterText,
                 viewMode === organizationSearchMode.OTHER &&
-                  styles.activeFilterText,
+                styles.activeFilterText,
               ]}
             >
               Available
@@ -143,51 +164,51 @@ const Organizations = () => {
       <ScrollView style={styles.content}>
         {(viewMode === organizationSearchMode.ALL ||
           viewMode === organizationSearchMode.MY) && (
-          <View>
-            <Text style={styles.primaryHeading}>My Organizations</Text>
-            {searchQuery.length > 0 && (
-              <View style={styles.resultsContainer}>
-                <Text style={styles.resultsText}>
-                  {myOrganizations.length} restaurant
-                  {myOrganizations.length !== 1 ? 's' : ''} found
-                </Text>
-              </View>
-            )}
-            {myOrganizations.map((org, index) => (
-              <OrganizationCard
-                key={index}
-                name={org.name}
-                image={org.image}
-                id={org.id}
-                joinedDetails={org.joinedDetails || {}}
-                orgDetails={org.orgDetails}
-              />
-            ))}
-          </View>
-        )}
+            <View>
+              <Text style={styles.primaryHeading}>My Organizations</Text>
+              {searchQuery.length > 0 && (
+                <View style={styles.resultsContainer}>
+                  <Text style={styles.resultsText}>
+                    {myOrganizations.length} organization
+                    {myOrganizations.length !== 1 ? 's' : ''} found
+                  </Text>
+                </View>
+              )}
+              {myOrganizations.map((org, index) => (
+                <OrganizationCard
+                  key={index}
+                  name={org.name}
+                  image={org.image}
+                  id={org.id}
+                  joinedDetails={org.joinedDetails || {}}
+                  orgDetails={org.orgDetails}
+                />
+              ))}
+            </View>
+          )}
         {(viewMode === organizationSearchMode.ALL ||
           viewMode === organizationSearchMode.OTHER) && (
-          <View>
-            <Text style={styles.primaryHeading}>Discover</Text>
-            {searchQuery.length > 0 && (
-              <View style={styles.resultsContainer}>
-                <Text style={styles.resultsText}>
-                  {otherOrganizations.length} restaurant
-                  {otherOrganizations.length !== 1 ? 's' : ''} found
-                </Text>
-              </View>
-            )}
-            {otherOrganizations.map((org, index) => (
-              <OrganizationCard
-                key={index}
-                name={org.name}
-                image={org.image}
-                id={org.id}
-                orgDetails={org.orgDetails || {}}
-              />
-            ))}
-          </View>
-        )}
+            <View>
+              <Text style={styles.primaryHeading}>Discover</Text>
+              {searchQuery.length > 0 && (
+                <View style={styles.resultsContainer}>
+                  <Text style={styles.resultsText}>
+                    {otherOrganizations.length} organization
+                    {otherOrganizations.length !== 1 ? 's' : ''} found
+                  </Text>
+                </View>
+              )}
+              {otherOrganizations.map((org, index) => (
+                <OrganizationCard
+                  key={index}
+                  name={org.name}
+                  image={org.image}
+                  id={org.id}
+                  orgDetails={org.orgDetails || {}}
+                />
+              ))}
+            </View>
+          )}
       </ScrollView>
       <TouchableOpacity
         style={styles.newOrganizationIcon}

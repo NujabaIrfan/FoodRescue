@@ -2,7 +2,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome6';
 import { auth, db } from '../../firebaseConfig';
-import { arrayUnion, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { arrayUnion, doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 
 const OrganizationCard = ({ name, image, joinedDetails, orgDetails, id }) => {
 
@@ -13,8 +13,10 @@ const OrganizationCard = ({ name, image, joinedDetails, orgDetails, id }) => {
   const joinOrganization = async () => {
     if (!currentUser) return console.error("Not logged in")
     let organizationRef = doc(db, "Organizations", id)
-    updateDoc(organizationRef, {
-      members: arrayUnion(currentUser.uid)
+    // add member
+    await setDoc(doc(organizationRef, "members", currentUser.uid), {
+      joinedDate: serverTimestamp(),
+      role: "member"
     })
     navigator.navigate("organization", { id })
   }
