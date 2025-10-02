@@ -51,7 +51,8 @@ export default function CreateOrganization() {
       description,
       image,
       createdDate: serverTimestamp(),
-      user: currentUser.uid
+      user: currentUser.uid,
+      members: [currentUser.uid]
     })
   }
 

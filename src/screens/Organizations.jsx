@@ -12,82 +12,8 @@ import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
 import FontAwesome6Icon from 'react-native-vector-icons/FontAwesome6';
 import OrganizationCard from '../components/OrganizationCard';
 import { useNavigation } from '@react-navigation/native';
-import { db } from '../../firebaseConfig';
+import { auth, db } from '../../firebaseConfig';
 import { collection, getDocs, Query } from 'firebase/firestore';
-
-// temporary data
-const dummyData = [
-  {
-    name: 'Food Helpers',
-    image: null,
-    orgDetails: {
-      memberCount: 45,
-      createdDate: Date.now() - 1000 * 60 * 60 * 24 * 200, // 200 days ago
-    },
-  },
-  {
-    name: 'Green Plate',
-    image:
-      'https://static.vecteezy.com/system/resources/thumbnails/005/380/829/small/group-of-hands-holding-together-free-photo.JPG',
-    joinedDetails: {
-      joinedDate: Date.now() - 1000 * 60 * 60 * 24 * 60, // 60 days ago
-      position: 'Coordinator',
-    },
-    orgDetails: {
-      memberCount: 150,
-      createdDate: Date.now() - 1000 * 60 * 60 * 24 * 500, // 500 days ago
-    },
-  },
-  {
-    name: 'Rescue Meals',
-    image:
-      'https://static.vecteezy.com/system/resources/thumbnails/005/380/829/small/group-of-hands-holding-together-free-photo.JPG',
-    orgDetails: {
-      memberCount: 30,
-      createdDate: Date.now() - 1000 * 60 * 60 * 24 * 100, // 100 days ago
-    },
-  },
-  {
-    name: 'NGO B',
-    image: null,
-    orgDetails: {
-      memberCount: 99,
-      createdDate: Date.now() - 1000 * 60 * 60 * 24 * 365, // 1 year ago
-    },
-  },
-  {
-    name: 'NGO C',
-    image: null,
-    orgDetails: {
-      memberCount: 99,
-      createdDate: Date.now() - 1000 * 60 * 60 * 24 * 365, // 1 year ago
-    },
-  },
-  {
-    name: 'NGO D',
-    image: null,
-    orgDetails: {
-      memberCount: 99,
-      createdDate: Date.now() - 1000 * 60 * 60 * 24 * 365, // 1 year ago
-    },
-  },
-  {
-    name: 'NGO E',
-    image: null,
-    orgDetails: {
-      memberCount: 99,
-      createdDate: Date.now() - 1000 * 60 * 60 * 24 * 365, // 1 year ago
-    },
-  },
-  {
-    name: 'NGO F',
-    image: null,
-    joinedDetails: {
-      joinedDate: Date.now() - 1000 * 60 * 60 * 24 * 30, // 30 days ago
-      position: 'Member',
-    },
-  },
-];
 
 const organizationSearchMode = {
   ALL: 0,
@@ -101,6 +27,8 @@ const Organizations = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState(organizationSearchMode.ALL);
 
+  const { currentUser } = auth
+
   useEffect(() => {
     (async () => {
       let data = await getDocs(collection(db, "Organizations"));
@@ -111,17 +39,23 @@ const Organizations = () => {
           image: d.image,
           id: doc.id,
           orgDetails: {
-            createdDate: d.createdDate
+            founder: d.user,
+            createdDate: d.createdDate,
+            members: d.members,
+            memberCount: d.members?.length || 0
           }
         }
       }))
     })()
   }, [])
 
-
-  const myOrganizations = []
-  const otherOrganizations = organizationsData.filter((org) =>
-    org.name.toLowerCase().includes(searchQuery.trim().toLowerCase()));
+  const searchFilteredOrganizations = organizationsData
+    .filter((org) => org.name.toLowerCase().includes(searchQuery.trim().toLowerCase()));
+  const myOrganizations = searchFilteredOrganizations
+    .filter((org) => org.orgDetails.members.includes(currentUser.uid))
+  const otherOrganizations = searchFilteredOrganizations
+    .filter((org) => !org.orgDetails.members.includes(currentUser.uid))
+    
 
   const clearSearch = () => {
     setSearchQuery('');

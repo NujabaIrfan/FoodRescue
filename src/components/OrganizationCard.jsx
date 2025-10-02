@@ -1,10 +1,23 @@
 import { useNavigation } from '@react-navigation/native';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome6';
+import { auth, db } from '../../firebaseConfig';
+import { arrayUnion, doc, getDoc, updateDoc } from 'firebase/firestore';
 
 const OrganizationCard = ({ name, image, joinedDetails, orgDetails, id }) => {
 
+  const { currentUser } = auth
+
   const navigator = useNavigation()
+
+  const joinOrganization = async () => {
+    if (!currentUser) return console.error("Not logged in")
+    let organizationRef = doc(db, "Organizations", id)
+    updateDoc(organizationRef, {
+      members: arrayUnion(currentUser.uid)
+    })
+    navigator.navigate("organization", { id })
+  }
 
   return (
     <TouchableOpacity
@@ -46,8 +59,8 @@ const OrganizationCard = ({ name, image, joinedDetails, orgDetails, id }) => {
           </View>
         </View>
         <View style={{ margin: 10 }}>
-          {!joinedDetails && (
-            <TouchableOpacity style={styles.button}>
+          {(!joinedDetails && currentUser) && (
+            <TouchableOpacity style={styles.button} onPress={joinOrganization}>
               <Text style={styles.buttonText}>Join</Text>
             </TouchableOpacity>
           )}

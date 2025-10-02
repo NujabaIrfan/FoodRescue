@@ -63,7 +63,6 @@ const Organization = ({ route }) => {
   const [organizationData, setOrganizationData] = useState(null)
   const [isShowingFullDescription, setIsShowingFullDescription] = useState(false);
   const [isFetchError, setIsFetchError] = useState(false)
-  console.log(route.params)
   const { id } = route.params
   if (!id) return (
     <View>
@@ -81,6 +80,8 @@ const Organization = ({ route }) => {
         description: data.description,
         image: data.image,
         orgDetails: {
+          members: data.members,
+          memberCount: data.members.length,
           createdDate: data.createdDate
         },
         events: []
