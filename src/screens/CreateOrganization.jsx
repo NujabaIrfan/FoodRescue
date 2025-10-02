@@ -11,10 +11,12 @@ import {
 } from 'react-native';
 
 import { launchImageLibrary } from 'react-native-image-picker';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection, doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import Toast from 'react-native-toast-message';
+import { useNavigation } from '@react-navigation/native';
 
 export default function CreateOrganization() {
+  const navigator = useNavigation()
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [image, setImage] = useState(require('../../assets/default-image.jpg'));
@@ -46,13 +48,19 @@ export default function CreateOrganization() {
       text1: "Please provide a valid description for your organization",
       position: "top"
     })
-    await addDoc(collection(db, "Organizations"), {
+    const orgRef = await addDoc(collection(db, "Organizations"), {
       name,
       description,
       image,
       createdDate: serverTimestamp(),
-      user: currentUser.uid
+      user: currentUser.uid,
     })
+    // add member
+    await setDoc(doc(orgRef, "members", currentUser.uid), {
+      joinedDate: serverTimestamp(),
+      role: "owner"
+    })
+    navigator.navigate("organization", { id: orgRef.id })
   }
 
   return (

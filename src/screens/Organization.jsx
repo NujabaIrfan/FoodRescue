@@ -11,59 +11,15 @@ import DonationRequest from '../components/DonationRequest';
 import OrganizationEvent from '../components/OrganizationEvent';
 import { useEffect, useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
-import { doc, getDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import Toast from 'react-native-toast-message';
 
-const dummyData = {
-  name: 'Green Plate',
-  description:
-    'lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis maximus consequat purus, eget lacinia ipsum ultrices eu. Proin eu ex nec dolor suscipit iaculis eget et quam. Nullam vestibulum eros sit amet lacinia lacinia. Cras sed sem dolor. Quisque cursus at velit eu lacinia. Morbi aliquet risus tempus tincidunt malesuada. Mauris vitae turpis feugiat, vulputate justo a, finibus sapien. Nulla fermentum vestibulum dolor sit amet pulvinar. Nullam suscipit facilisis magna, vel pulvinar turpis lobortis a.',
-  image:
-    'https://static.vecteezy.com/system/resources/thumbnails/005/380/829/small/group-of-hands-holding-together-free-photo.JPG',
-
-  orgDetails: {
-    memberCount: 150,
-    createdDate: Date.now() - 1000 * 60 * 60 * 24 * 500, // 500 days ago
-  },
-  events: [
-    {
-      eventName: 'Community Food Drive',
-      venue: 'Colombo, Sri Lanka',
-      datetime: Date.now() - 1000 * 60 * 60 * 24 * 7, // 7 days ago
-      image:
-        'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=500&q=80',
-    },
-    {
-      eventName: 'Meal Distribution',
-      venue: 'Kandy, Sri Lanka',
-      datetime: Date.now() - 1000 * 60 * 60 * 24 * 30, // 30 days ago
-      image:
-        'https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=500&q=80',
-    },
-    {
-      eventName: 'Charity Lunch',
-      venue: 'Galle, Sri Lanka',
-      datetime: Date.now() - 1000 * 60 * 60 * 24 * 60, // 60 days ago
-      image:
-        'https://images.unsplash.com/photo-1519864600265-abb23847ef2c?auto=format&fit=crop&w=500&q=80',
-    },
-    {
-      eventName: 'Food Rescue Workshop',
-      venue: 'Jaffna, Sri Lanka',
-      datetime: Date.now() - 1000 * 60 * 60 * 24 * 90, // 90 days ago
-      image:
-        'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=500&q',
-    },
-  ],
-};
-
-const Organization = ({ route }) => {  
+const Organization = ({ route }) => {
   const navigator = useNavigation();
   const [organizationData, setOrganizationData] = useState(null)
   const [isShowingFullDescription, setIsShowingFullDescription] = useState(false);
   const [isFetchError, setIsFetchError] = useState(false)
-  console.log(route.params)
   const { id } = route.params
   if (!id) return (
     <View>
@@ -73,26 +29,43 @@ const Organization = ({ route }) => {
 
   useEffect(() => {
     (async () => {
-      let res = await getDoc(doc(db, "Organizations", id))
-      if (!res) return setIsFetchError(true)
-      let data = res.data()
-      setOrganizationData({
-        name: data.name,
-        description: data.description,
-        image: data.image,
-        orgDetails: {
-          createdDate: data.createdDate
-        },
-        events: []
-      })
+      try {
+        const res = await getDoc(doc(db, "Organizations", id))
+        if (!res.exists()) return setIsFetchError(true)
+
+        const data = res.data()
+
+        // fetch members subcollection
+        const membersSnap = await getDocs(collection(db, "Organizations", id, "members"))
+        const members = membersSnap.docs.map(m => ({
+          id: m.id,
+          ...m.data()
+        }))
+
+        setOrganizationData({
+          name: data.name,
+          description: data.description,
+          image: data.image,
+          orgDetails: {
+            members,
+            memberCount: members.length,
+            createdDate: data.createdDate
+          },
+          events: []
+        })
+      } catch (err) {
+        console.error(err)
+        setIsFetchError(true)
+      }
     })()
-  }, [])
+  }, [id])
+
 
   if (isFetchError) return Toast.show({
     type: "error",
     text1: "Cannot fetch the organization"
   });
-  
+
   if (!organizationData) return // initial render (before fetch)
 
   return (
@@ -115,6 +88,9 @@ const Organization = ({ route }) => {
           <Text style={styles.infoText}>
             {organizationData.orgDetails.memberCount || 0} members
           </Text>
+          <TouchableOpacity style={styles.button} onPress={() => navigator.navigate("organizationVolunteers", { id })}>
+            <Text style={styles.buttonText}>View members</Text>
+          </TouchableOpacity>
         </View>
       </View>
       <Text
