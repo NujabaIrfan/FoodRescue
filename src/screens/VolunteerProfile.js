@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, Switch, TextInput, Alert, Button } from "react-native";
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, Switch, TextInput, Alert, Button, RefreshControl } from "react-native";
 import { auth, db } from "../../firebaseConfig";
 import { doc, getDoc, updateDoc, deleteDoc, collection, getDocs, addDoc } from "firebase/firestore";
 import { signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "firebase/auth";
@@ -28,44 +28,54 @@ export default function VolunteerProfile() {
   const [availableWorks, setAvailableWorks] = useState([]);
   const [medals, setMedals] = useState([]);
   const [completedWorkCount, setCompletedWorkCount] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     navigation.setOptions({ title: 'My Profile' });
   }, [navigation]);
   
-  useEffect(() => {
-    const fetchVolunteer = async () => {
-      try {
-        const user = auth.currentUser;
-        if (user) {
-          const docRef = doc(db, "Volunteers", user.uid);
-          const docSnap = await getDoc(docRef);
+  const fetchVolunteerData = async () => {
+    try {
+      const user = auth.currentUser;
+      if (user) {
+        const docRef = doc(db, "Volunteers", user.uid);
+        const docSnap = await getDoc(docRef);
 
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            setVolunteer(data);
-            setForm(data);
-            setSkills(data.skills || {});
-            setProfilePhoto(data.profilePhoto || "");
-            setPreferredArea(data.preferredArea || "");
-            setCompletedWorks(data.completedWorks || []);
-            setPendingWorks(data.pendingWorks || []);
-            setCompletedWorkCount(data.completedWorkCount || 0);
-            setMedals(data.medals || []);
-            
-            calculateMedals(data.completedWorkCount || 0);
-          }
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setVolunteer(data);
+          setForm(data);
+          setSkills(data.skills || {});
+          setProfilePhoto(data.profilePhoto || "");
+          setPreferredArea(data.preferredArea || "");
+          setCompletedWorks(data.completedWorks || []);
+          setPendingWorks(data.pendingWorks || []);
+          setCompletedWorkCount(data.completedWorkCount || 0);
+          setMedals(data.medals || []);
+          
+          calculateMedals(data.completedWorkCount || 0);
         }
-      } catch (error) {
-        console.error("Error fetching volunteer:", error);
-      } finally {
-        setLoading(false);
       }
-    };
+    } catch (error) {
+      console.error("Error fetching volunteer:", error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
-    fetchVolunteer();
+  // Update your useEffect to use the new function
+  useEffect(() => {
+    fetchVolunteerData();
     fetchAvailableWorks();
   }, []);
+
+  // Add pull-to-refresh functionality
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchVolunteerData();
+    fetchAvailableWorks();
+  };
 
   //Medal calculation
   const calculateMedals = (count) => {
@@ -91,67 +101,167 @@ export default function VolunteerProfile() {
     }
   };
 
-  //Fetch available works
+  // Fetch available food requests (corrected)
   const fetchAvailableWorks = async () => {
-    try {
-      const worksSnapshot = await getDocs(collection(db, "Organizations"));
-      const works = [];
-      worksSnapshot.forEach((doc) => {
-        works.push({ id: doc.id, ...doc.data() });
-      });
-      setAvailableWorks(works);
-    } catch (error) {
-      console.error("Error fetching available works:", error);
-    }
-  };
-
-  //Pick work functionality
-  const pickWork = async (work) => {
-    try {
-      const user = auth.currentUser;
-      if (user) {
-        const docRef = doc(db, "Volunteers", user.uid);
-        const updatedPendingWorks = [...pendingWorks, { ...work, pickedAt: new Date() }];
+  try {
+    const worksSnapshot = await getDocs(collection(db, "foodRequests"));
+    const works = [];
+    
+    worksSnapshot.forEach((doc) => {
+      const requestData = doc.data();
+      const status = requestData.status || "Pending";
+      
+      // Only include pending requests
+      if (status === "Pending") {
+        // Handle array structure - take first item or use empty object
+        const itemData = requestData.items && requestData.items.length > 0 
+          ? requestData.items[0] 
+          : {};
         
-        await updateDoc(docRef, {
-          pendingWorks: updatedPendingWorks
+        works.push({ 
+          id: doc.id,
+          // Access fields from the first item in the array
+          title: itemData.item || "Food Request",
+          description: `${itemData.amount} ${itemData.item}`,
+          amount: itemData.amount,
+          item: itemData.item,
+          priority: itemData.priority,
+          pickupDate: itemData.pickupDate,
+          pickupTime: itemData.pickupTime,
+          requiredBefore: itemData.requiredBefore,
+          status: status,
+          organization: requestData.organization || {},
+          type: "food_request"
         });
-        
-        setPendingWorks(updatedPendingWorks);
-        await deleteDoc(doc(db, "Organizations", work.id));
-        
-        Toast.show({
-          type: 'success',
-          text1: 'Work Picked!',
-          text2: 'The work has been added to your pending tasks'
-        });
-        
-        fetchAvailableWorks();
       }
-    } catch (error) {
-      console.error("Error picking work:", error);
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: 'Failed to pick work'
+    });
+    
+    setAvailableWorks(works);
+  } catch (error) {
+    console.error("Error fetching available works:", error);
+  }
+};
+
+  // Pick work functionality (updated for food requests)
+  const pickWork = async (work) => {
+  try {
+    const user = auth.currentUser;
+    if (user && work.id) {
+      const volunteerDocRef = doc(db, "Volunteers", user.uid);
+      
+      // Get current volunteer data
+      const volunteerDoc = await getDoc(volunteerDocRef);
+      const volunteerData = volunteerDoc.exists() ? volunteerDoc.data() : {};
+      const existingPendingWorks = volunteerData.pendingWorks || [];
+      
+      // Create work object with safe defaults - NO undefined values
+      const acceptedWork = {
+        id: work.id,
+        title: work.title || "Food Request",
+        type: "food_request",
+        status: "Accepted",
+        pickedAt: new Date().toISOString(),
+        volunteerId: user.uid,
+        volunteerName: user.displayName || "Volunteer",
+        items: [
+          {
+            amount: work.amount || "",
+            item: work.item || "",
+            priority: work.priority || "Medium",
+            pickupDate: work.pickupDate || new Date().toISOString(),
+            pickupTime: work.pickupTime || new Date().toISOString(),
+            requiredBefore: work.requiredBefore || new Date().toISOString()
+          }
+        ],
+        organization: {
+          id: work.organization?.id || "",
+          name: work.organization?.name || "Unknown Organization",
+          requestedBy: work.organization?.requestedBy || ""
+        }
+      };
+      
+      const updatedPendingWorks = [...existingPendingWorks, acceptedWork];
+      
+      console.log('Work object from UI:', work);
+console.log('Accepted work to save:', acceptedWork);
+console.log('Updated pending works:', updatedPendingWorks);
+
+
+      // Update both documents
+      await updateDoc(volunteerDocRef, { 
+        pendingWorks: updatedPendingWorks 
       });
+      
+      await updateDoc(doc(db, "foodRequests", work.id), {
+        status: "Accepted",
+        acceptedBy: user.uid,
+        acceptedByVolunteer: user.displayName || "Volunteer",
+        acceptedAt: new Date().toISOString()
+      });
+      
+      // Update local state
+      setPendingWorks(updatedPendingWorks);
+      
+      Toast.show({
+        type: 'success',
+        text1: 'Request Accepted!',
+        text2: 'Food request added to your pending tasks'
+      });
+      
+      fetchAvailableWorks();
     }
-  };
+  } catch (error) {
+    console.error("Error accepting request:", error);
+    Toast.show({
+      type: 'error',
+      text1: 'Error',
+      text2: 'Failed to accept request: ' + error.message
+    });
+  }
+};
 
   //Complete work functionality
   const completeWork = async (workIndex) => {
     try {
       const user = auth.currentUser;
-      if (user) {
+      if (user && pendingWorks[workIndex]) {
+        const work = pendingWorks[workIndex];
+        
+        // Remove from pending works
         const updatedPendingWorks = pendingWorks.filter((_, index) => index !== workIndex);
+        
+        // Add to completed works
+        const updatedCompletedWorks = [
+          ...completedWorks,
+          {
+            ...work,
+            completedAt: new Date().toISOString(),
+            status: "Completed"
+          }
+        ];
+        
         const newCompletedCount = completedWorkCount + 1;
         
+        // Update volunteer document in Firestore
         await updateDoc(doc(db, "Volunteers", user.uid), {
           pendingWorks: updatedPendingWorks,
+          completedWorks: updatedCompletedWorks,
           completedWorkCount: newCompletedCount
         });
         
+        // If it's a food request, update its status in the foodRequests collection
+        if (work.type === "food_request" && work.id) {
+          await updateDoc(doc(db, "foodRequests", work.id), {
+            status: "Completed",
+            completedAt: new Date().toISOString(),
+            completedBy: user.uid,
+            completedByVolunteer: user.displayName || "Volunteer"
+          });
+        }
+        
+        // Update local state
         setPendingWorks(updatedPendingWorks);
+        setCompletedWorks(updatedCompletedWorks);
         setCompletedWorkCount(newCompletedCount);
         calculateMedals(newCompletedCount);
         
@@ -163,7 +273,44 @@ export default function VolunteerProfile() {
       }
     } catch (error) {
       console.error("Error completing work:", error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to mark work as completed'
+      });
     }
+  };
+
+  const renderAvailableWorks = () => {
+    return (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>🍲 Available Food Requests ({availableWorks.length})</Text>
+        
+        {availableWorks.length === 0 ? (
+          <Text style={styles.noData}>No pending food requests available.</Text>
+        ) : (
+          availableWorks.map((work, index) => (
+            <View key={work.id} style={styles.workCard}>
+              {/* ... your work card content ... */}
+              <TouchableOpacity 
+                style={styles.pickButton}
+                onPress={() => pickWork(work)}
+              >
+                <Text style={styles.pickButtonText}>✅ Accept This Request</Text>
+              </TouchableOpacity>
+            </View>
+          ))
+        )}
+        
+        {/* Always visible navigation button */}
+        <TouchableOpacity 
+          style={styles.navigateButton}
+          onPress={() => navigation.navigate('foodRequestListScreen')}
+        >
+          <Text style={styles.navigateButtonText}>📋 Browse All Food Requests</Text>
+        </TouchableOpacity>
+      </View>
+    );
   };
 
   const renderPendingWorks = () => {
@@ -177,8 +324,14 @@ export default function VolunteerProfile() {
             <View key={index} style={styles.workCard}>
               <Text style={styles.workTitle}>{work.title}</Text>
               <Text style={styles.workDescription}>{work.description}</Text>
+              {work.priority && (
+                <Text style={styles.workDetails}>Priority: {work.priority}</Text>
+              )}
+              {work.organization?.name && (
+                <Text style={styles.workNGO}>Organization: {work.organization.name}</Text>
+              )}
               <Text style={styles.pickedDate}>
-                📅 Picked: {work.pickedAt ? new Date(work.pickedAt).toLocaleDateString() : 'Recently'}
+                📅 Accepted: {work.pickedAt ? new Date(work.pickedAt).toLocaleDateString() : 'Recently'}
               </Text>
               <TouchableOpacity 
                 style={styles.completeButton}
@@ -475,7 +628,8 @@ export default function VolunteerProfile() {
   if (loading) return <Text style={styles.loadingText}>Loading...</Text>;
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView contentContainerStyle={styles.container} refreshControl={
+    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
       {/* ---------------- Password Change Mode ---------------- */}
       {showPasswordForm ? (
         <View style={styles.passwordFormContainer}>
@@ -783,16 +937,7 @@ export default function VolunteerProfile() {
               </View>
 
               {/* Available Works Section */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Available Works</Text>
-                <TouchableOpacity 
-                  style={styles.selectButton} 
-                  onPress={() => navigation.navigate('organizations')}
-                >
-                  <Icon name="work" size={20} color="#fff" style={styles.buttonIcon} />
-                  <Text style={styles.buttonText}>Browse Available Works</Text>
-                </TouchableOpacity>
-              </View>
+              {renderAvailableWorks()}
 
               {/* Pending Works Section */}
               {renderPendingWorks()}
@@ -1617,4 +1762,17 @@ const styles = StyleSheet.create({
     flex: 1,
     fontWeight: '500',
   },
+  navigateButton: {
+    backgroundColor: '#2196F3',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 20,
+    marginHorizontal: 10,
+  },
+  navigateButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  }
 });
