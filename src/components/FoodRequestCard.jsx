@@ -16,7 +16,7 @@ const FoodRequestCard = ({ request, onPress }) => {
 
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
-      case "approved":
+      case "accepted":
         return "#28a745";
       case "pending":
         return "#ffc107";

@@ -79,6 +79,7 @@ const CreateFoodRequest = ({ route }) => {
         pickupDate: Timestamp.fromDate(pickupDate),
         pickupTime: Timestamp.fromDate(pickupTime),
         status: 'Pending',
+        volunteerAccepted: 'false',
       },
 
       
@@ -88,6 +89,7 @@ const CreateFoodRequest = ({ route }) => {
       await addDoc(collection(db, 'foodRequests'), requestData);
 
       Alert.alert('Success', 'Food request created successfully');
+      console.log(requestData);
       navigation.navigate('foodRequestListScreen');
     } catch (error) {
       console.error('Error adding document: ', error);
