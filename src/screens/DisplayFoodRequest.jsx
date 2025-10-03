@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -8,39 +8,37 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
-} from "react-native";
+} from 'react-native';
 import { auth, db } from '../../firebaseConfig';
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
-
-const DisplayFoodRequest = ({route}) => {
-  const {requestId} = route.params;
+const DisplayFoodRequest = ({ route }) => {
+  const { requestId } = route.params;
   const [requestData, setRequestData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [notFound, setNotFound] = useState(false);
 
-  useEffect (()=>{
+  useEffect(() => {
     const fetchRequestData = async () => {
-      if(!requestId) return;
-      try{
-        const docRef = doc(db, "foodRequests", requestId);
+      if (!requestId) return;
+      try {
+        const docRef = doc(db, 'foodRequests', requestId);
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-        setRequestData({
-          id: docSnap.id,
-          ...docSnap.data(),
-        });
-      } else {
-        setNotFound(true);
-      }
-
+          setRequestData({
+            id: docSnap.id,
+            ...docSnap.data(),
+          });
+        } else {
+          setNotFound(true);
+        }
       } catch (error) {
-      console.error("Error fetching request: ", error);
-      Alert.alert("Error", "Failed to fetch request data");
-    } finally {
-      setLoading(false);
-    }
+        console.error('Error fetching request: ', error);
+        Alert.alert('Error', 'Failed to fetch request data');
+      } finally {
+        setLoading(false);
+      }
     };
     fetchRequestData();
   }, [requestId]);
@@ -54,7 +52,7 @@ const DisplayFoodRequest = ({route}) => {
   //   setRequestData(null);
 
   //   try {
-      
+
   //     const docRef = doc(db, "foodRequests", requestId.trim());
   //     const docSnap = await getDoc(docRef);
 
@@ -75,42 +73,77 @@ const DisplayFoodRequest = ({route}) => {
   //   }
   // };
 
-  const formatDate = (timestamp) => {
-    if (!timestamp) return "Not specified";
+  const volunteerAcceptFoodRequest = async (requestId) => {
     try {
-      const date = timestamp.toDate? timestamp.toDate() : new Date(timestamp);
+      const docRef = doc(db, 'foodRequests', requestId);
+      await updateDoc(docRef, { 'foodRequest.volunteerAccepted': 'true' });
+      Alert.alert('Success', 'Request assigned successfully');
+
+      setRequestData((prev) => ({
+        ...prev,
+        foodRequest: { ...prev.foodRequest, volunteerAccepted: 'true' },
+      }));
+    } catch (error) {
+      console.error('Error updating request:', error);
+      Alert.alert(
+        'Error',
+        'Failed to assign the request. Check console for details.'
+      );
+    }
+  };
+
+  const cancelVolunteerAssignment = async (requestId) => {
+    try {
+      const docRef = doc(db, 'foodRequests', requestId);
+      await updateDoc(docRef, { 'foodRequest.volunteerAccepted': 'false' });
+      Alert.alert('Success', 'Assignment cancelled');
+
+      setRequestData((prev) => ({
+        ...prev,
+        foodRequest: { ...prev.foodRequest, volunteerAccepted: 'false' },
+      }));
+    } catch (error) {
+      console.error('Error cancelling assignment:', error);
+      Alert.alert('Error', 'Failed to cancel assignment');
+    }
+  };
+
+  const formatDate = (timestamp) => {
+    if (!timestamp) return 'Not specified';
+    try {
+      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
       return date.toLocaleDateString();
     } catch {
-      return "Invalid date";
+      return 'Invalid date';
     }
   };
 
   const formatTime = (timestamp) => {
-    if (!timestamp) return "Not specified";
+    if (!timestamp) return 'Not specified';
     try {
-      const date = timestamp.toDate? timestamp.toDate() : new Date(timestamp);
+      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
       return date.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
+        hour: '2-digit',
+        minute: '2-digit',
       });
     } catch {
-      return "Invalid time";
+      return 'Invalid time';
     }
   };
 
   const formatCreatedAt = (timestamp) => {
-    if (!timestamp) return "Not available";
+    if (!timestamp) return 'Not available';
     try {
       // Handle Firestore timestamp
       const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
       return date.toLocaleString();
     } catch {
-      return "Invalid timestamp";
+      return 'Invalid timestamp';
     }
   };
 
   const clearSearch = () => {
-    setReqestId("");
+    setReqestId('');
     setRequestData(null);
     setNotFound(false);
   };
@@ -156,139 +189,145 @@ const DisplayFoodRequest = ({route}) => {
         </View> */}
 
         {loading ? (
-          <ActivityIndicator size='large' color="#007bff"/>
-        ): notFound ?(
+          <ActivityIndicator size="large" color="#007bff" />
+        ) : notFound ? (
           <Text>No request found with ID: {requestId}</Text>
         ) : (
           requestData && (
             <View style={styles.resultContainer}>
               <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Request Details</Text>
+                <Text style={styles.sectionTitle}>Request Details</Text>
 
-              <View style={styles.detailRow}>
-                <Text style={styles.label}>Request ID: </Text>
-                <Text style={styles.value}>{requestData.id}</Text>
-              </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.label}>Request ID: </Text>
+                  <Text style={styles.value}>{requestData.id}</Text>
+                </View>
 
-              {/* <View style={styles.detailRow}>
+                {/* <View style={styles.detailRow}>
                 <Text style={styles.label}>Request submitted on: </Text>
                 <Text style={styles.value}>
                   {formatCreatedAt(requestData.createdAt)}
                 </Text>
               </View> */}
 
-              <View style={styles.detailRow}>
-                <Text style={styles.label}>Organization: </Text>
-                <Text style={styles.value}>
-                  {requestData.organization?.name || "Not specified"}
-                </Text>
-              </View>
-
-              <View style={styles.detailRow}>
-                <Text style={styles.label}>Requested By: </Text>
-                <Text style={styles.value}>
-                  {requestData.organization?.requestedBy || "Not specified"}
-                </Text>
-              </View>
-
-              {/* status section */}
-              <View>
-            <Text style={styles.label}>Status:</Text>
-            <Text style={styles.value}>
-                  {requestData.foodRequest?.status || "Pending"}
-                </Text>
+                <View style={styles.detailRow}>
+                  <Text style={styles.label}>Organization: </Text>
+                  <Text style={styles.value}>
+                    {requestData.organization?.name || 'Not specified'}
+                  </Text>
                 </View>
-            </View>
 
-            {/* food details */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Food Details</Text>
+                <View style={styles.detailRow}>
+                  <Text style={styles.label}>Requested By: </Text>
+                  <Text style={styles.value}>
+                    {requestData.organization?.requestedBy || 'Not specified'}
+                  </Text>
+                </View>
 
-              <View style={styles.detailRow}>
-                <Text style={styles.label}>Donor:</Text>
-                <Text style={styles.value}>
-                  {requestData.donor || "Not assigned yet"}
-                </Text>
+                {/* status section */}
+                <View>
+                  <Text style={styles.label}>Status:</Text>
+                  <Text style={styles.value}>
+                    {requestData.foodRequest?.status || 'Pending'}
+                  </Text>
+                </View>
               </View>
 
-              <View style={styles.foodItemsContainer}>
-                <Text style={styles.label}>Food Item(s)</Text>
-                {requestData.foodRequest?.items?.map((item, index) => (
-                  <View key={index} style={styles.foodItem}>
-                    <Text style={styles.foodItemName}>{item.item}</Text>
-                    <Text style={styles.foodItemAmount}>{item.amount}</Text>
-                  </View>
-                ))}
+              {/* food details */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Food Details</Text>
+
+                <View style={styles.detailRow}>
+                  <Text style={styles.label}>Donor:</Text>
+                  <Text style={styles.value}>
+                    {requestData.donor || 'Not assigned yet'}
+                  </Text>
+                </View>
+
+                <View style={styles.foodItemsContainer}>
+                  <Text style={styles.label}>Food Item(s)</Text>
+                  {requestData.foodRequest?.items?.map((item, index) => (
+                    <View key={index} style={styles.foodItem}>
+                      <Text style={styles.foodItemName}>{item.item}</Text>
+                      <Text style={styles.foodItemAmount}>{item.amount}</Text>
+                    </View>
+                  ))}
+                </View>
+
+                <View style={styles.detailRow}>
+                  <Text style={styles.label}>Required before:</Text>
+                  <Text style={styles.value}>
+                    {formatDate(requestData.foodRequest?.requiredBefore)}
+                  </Text>
+                </View>
+
+                <View style={styles.detailRow}>
+                  <Text style={styles.label}>Priority:</Text>
+                  <Text
+                    style={[
+                      styles.value,
+                      styles.priorityText,
+                      requestData.foodRequest?.priority === 'High' &&
+                        styles.highPriority,
+                      requestData.foodRequest?.priority === 'Urgent' &&
+                        styles.urgentPriority,
+                    ]}
+                  >
+                    {requestData.foodRequest?.priority || 'Medium'}
+                  </Text>
+                </View>
               </View>
 
-              <View style={styles.detailRow}>
-                <Text style={styles.label}>Required before:</Text>
-                <Text style={styles.value}>
-                  {formatDate(requestData.foodRequest?.requiredBefore)}
-                </Text>
+              {/* Pick-up Details Section */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Pick-up Details</Text>
+
+                <View style={styles.detailRow}>
+                  <Text style={styles.label}>Available date:</Text>
+                  <Text style={styles.value}>
+                    {formatDate(requestData.foodRequest?.pickupDate)}
+                  </Text>
+                </View>
+
+                <View style={styles.detailRow}>
+                  <Text style={styles.label}>Available time:</Text>
+                  <Text style={styles.value}>
+                    {formatTime(requestData.foodRequest?.pickupTime)}
+                  </Text>
+                </View>
               </View>
 
-              <View style={styles.detailRow}>
-                <Text style={styles.label}>Priority:</Text>
-                <Text
-                  style={[
-                    styles.value,
-                    styles.priorityText,
-                    requestData.foodRequest?.priority === "High" &&
-                      styles.highPriority,
-                    requestData.foodRequest?.priority === "Urgent" &&
-                      styles.urgentPriority,
-                  ]}
-                >
-                  {requestData.foodRequest?.priority || "Medium"}
-                </Text>
-              </View>
-            </View>
+              <View style={styles.buttonContainer}>
+  <TouchableOpacity 
+    style={[
+      styles.searchButton,
+      requestData.foodRequest?.volunteerAccepted === "true" && styles.disabledButton
+    ]}
+    onPress={() => volunteerAcceptFoodRequest(requestData.id)}
+    disabled={requestData.foodRequest?.volunteerAccepted === "true"}
+  >
+    <Text style={styles.searchButtonText}>Assign Request to yourself</Text>
+  </TouchableOpacity>
 
-            {/* Pick-up Details Section */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Pick-up Details</Text>
-
-              <View style={styles.detailRow}>
-                <Text style={styles.label}>Available date:</Text>
-                <Text style={styles.value}>
-                  {formatDate(requestData.foodRequest?.pickupDate)}
-                </Text>
-              </View>
-
-              <View style={styles.detailRow}>
-                <Text style={styles.label}>Available time:</Text>
-                <Text style={styles.value}>
-                  {formatTime(requestData.foodRequest?.pickupTime)}
-                </Text>
-              </View>
-
-              
-            </View>
-
-            <View>
-                <TouchableOpacity>
-                  <Text>Accept Request</Text>
-                </TouchableOpacity>
-              
-              </View>
-
-            
-
+  {requestData.foodRequest?.volunteerAccepted === "true" && (
+    <TouchableOpacity 
+      style={styles.clearButton}
+      onPress={() => cancelVolunteerAssignment(requestData.id)}
+    >
+      <Text style={styles.clearButtonText}>Cancel Assignment</Text>
+    </TouchableOpacity>
+  )}
+</View>
             </View>
           )
-        )
-      }
-
-        
-        
+        )}
       </View>
     </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-    container: {
+  container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
@@ -495,6 +534,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#856404',
   },
+  buttonContainer: {
+  gap: 10,
+  marginTop: 10,
+},
 });
 
 export default DisplayFoodRequest;
