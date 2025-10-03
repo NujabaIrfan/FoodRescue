@@ -1,11 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import FoodChatbot from '../components/FoodChatbot';
+import FoodChatBot from '../components/FoodChatbot';
 
 const ChatbotScreen = () => {
   return (
     <View style={styles.container}>
-        <FoodChatbot/>
+        <FoodChatBot/>
     </View>
   );
 }
