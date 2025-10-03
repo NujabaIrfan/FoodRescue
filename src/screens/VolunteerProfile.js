@@ -29,6 +29,7 @@ export default function VolunteerProfile() {
   const [medals, setMedals] = useState([]);
   const [completedWorkCount, setCompletedWorkCount] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+  const [completedWorkPhotos, setCompletedWorkPhotos] = useState([]); 
 
   useEffect(() => {
     navigation.setOptions({ title: 'My Profile' });
@@ -103,122 +104,196 @@ export default function VolunteerProfile() {
 
   // Fetch available food requests (corrected)
   const fetchAvailableWorks = async () => {
-  try {
-    const worksSnapshot = await getDocs(collection(db, "foodRequests"));
-    const works = [];
-    
-    worksSnapshot.forEach((doc) => {
-      const requestData = doc.data();
-      const status = requestData.status || "Pending";
+    try {
+      console.log("🟡 STARTING fetchAvailableWorks");
       
-      // Only include pending requests
-      if (status === "Pending") {
-        // Handle array structure - take first item or use empty object
-        const itemData = requestData.items && requestData.items.length > 0 
-          ? requestData.items[0] 
-          : {};
+      const worksSnapshot = await getDocs(collection(db, "foodRequests"));
+      console.log("🔵 Total documents in foodRequests:", worksSnapshot.size);
+      
+      const works = [];
+      
+      worksSnapshot.forEach((doc) => {
+        const requestData = doc.data();
         
-        works.push({ 
-          id: doc.id,
-          // Access fields from the first item in the array
-          title: itemData.item || "Food Request",
-          description: `${itemData.amount} ${itemData.item}`,
-          amount: itemData.amount,
-          item: itemData.item,
-          priority: itemData.priority,
-          pickupDate: itemData.pickupDate,
-          pickupTime: itemData.pickupTime,
-          requiredBefore: itemData.requiredBefore,
-          status: status,
-          organization: requestData.organization || {},
-          type: "food_request"
-        });
-      }
-    });
-    
-    setAvailableWorks(works);
-  } catch (error) {
-    console.error("Error fetching available works:", error);
-  }
-};
+        // FIX: Check both possible status locations - NESTED FIRST
+        const status = requestData.foodRequest?.status || requestData.status || "Pending";
+        
+        console.log("📄 Processing document:", doc.id);
+        console.log("🔍 Document status:", requestData.status);
+        console.log("🔍 FoodRequest status:", requestData.foodRequest?.status);
+        console.log("🔍 Final status used:", status);
+        
+        // Only include pending requests
+        if (status === "Pending") {
+          console.log("✅ ADDING to available works");
+          
+          // Handle different possible data structures
+          let foodItem = "";
+          let organizationName = "";
+          let requestedBy = "";
+          
+          // Get food item from nested structure
+          if (requestData.foodRequest?.items?.[0]?.item) {
+            foodItem = requestData.foodRequest.items[0].item;
+          } else if (requestData.foodItem) {
+            foodItem = requestData.foodItem;
+          } else if (requestData.items?.[0]?.item) {
+            foodItem = requestData.items[0].item;
+          }
+          
+          console.log("🍲 Food item found:", foodItem);
+          
+          // Check organization structure
+          if (typeof requestData.organization === 'string') {
+            organizationName = requestData.organization;
+          } else if (requestData.organization?.name) {
+            organizationName = requestData.organization.name;
+          }
+          
+          // Check requestedBy structure
+          if (requestData.requestedBy) {
+            requestedBy = requestData.requestedBy;
+          } else if (requestData.organization?.requestedBy) {
+            requestedBy = requestData.organization.requestedBy;
+          }
+
+          // FIX: Convert Firestore Timestamps to readable strings
+          const convertTimestamp = (timestamp) => {
+            if (!timestamp) return "";
+            try {
+              if (timestamp.seconds && timestamp.nanoseconds) {
+                // It's a Firestore Timestamp
+                const date = new Date(timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000);
+                return date.toLocaleDateString();
+              } else if (timestamp.toDate) {
+                // It's a Firestore Timestamp object with toDate method
+                return timestamp.toDate().toLocaleDateString();
+              }
+              return String(timestamp);
+            } catch {
+              return "Invalid date";
+            }
+          };
+
+          const convertTime = (timestamp) => {
+            if (!timestamp) return "";
+            try {
+              if (timestamp.seconds && timestamp.nanoseconds) {
+                // It's a Firestore Timestamp
+                const date = new Date(timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000);
+                return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              } else if (timestamp.toDate) {
+                // It's a Firestore Timestamp object with toDate method
+                return timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              }
+              return String(timestamp);
+            } catch {
+              return "Invalid time";
+            }
+          };
+          
+          works.push({ 
+            id: doc.id,
+            title: foodItem || "Food Request",
+            description: foodItem || "Food Donation",
+            amount: requestData.foodRequest?.items?.[0]?.amount || "1",
+            item: foodItem || "Food",
+            foodItem: foodItem,
+            priority: requestData.foodRequest?.priority || "Medium",
+            // FIX: Convert timestamps to strings
+            pickupDate: convertTimestamp(requestData.foodRequest?.pickupDate),
+            pickupTime: convertTime(requestData.foodRequest?.pickupTime),
+            availableDate: convertTimestamp(requestData.foodRequest?.pickupDate),
+            availableTime: convertTime(requestData.foodRequest?.pickupTime),
+            requiredBefore: convertTimestamp(requestData.foodRequest?.requiredBefore) || "",
+            status: status,
+            organization: {
+              name: organizationName || "Unknown Organization",
+              requestedBy: requestedBy || ""
+            },
+            type: "food_request"
+          });
+        } else {
+          console.log("❌ SKIPPING - Status is not Pending:", status);
+        }
+      });
+      
+      console.log("📦 Final works array length:", works.length);
+      console.log("📦 Final works:", works);
+      
+      setAvailableWorks(works);
+    } catch (error) {
+      console.error("❌ Error fetching available works:", error);
+    }
+  };
 
   // Pick work functionality (updated for food requests)
   const pickWork = async (work) => {
-  try {
-    const user = auth.currentUser;
-    if (user && work.id) {
-      const volunteerDocRef = doc(db, "Volunteers", user.uid);
-      
-      // Get current volunteer data
-      const volunteerDoc = await getDoc(volunteerDocRef);
-      const volunteerData = volunteerDoc.exists() ? volunteerDoc.data() : {};
-      const existingPendingWorks = volunteerData.pendingWorks || [];
-      
-      // Create work object with safe defaults - NO undefined values
-      const acceptedWork = {
-        id: work.id,
-        title: work.title || "Food Request",
-        type: "food_request",
-        status: "Accepted",
-        pickedAt: new Date().toISOString(),
-        volunteerId: user.uid,
-        volunteerName: user.displayName || "Volunteer",
-        items: [
-          {
-            amount: work.amount || "",
-            item: work.item || "",
-            priority: work.priority || "Medium",
-            pickupDate: work.pickupDate || new Date().toISOString(),
-            pickupTime: work.pickupTime || new Date().toISOString(),
-            requiredBefore: work.requiredBefore || new Date().toISOString()
-          }
-        ],
-        organization: {
-          id: work.organization?.id || "",
-          name: work.organization?.name || "Unknown Organization",
-          requestedBy: work.organization?.requestedBy || ""
-        }
-      };
-      
-      const updatedPendingWorks = [...existingPendingWorks, acceptedWork];
-      
-      console.log('Work object from UI:', work);
-console.log('Accepted work to save:', acceptedWork);
-console.log('Updated pending works:', updatedPendingWorks);
-
-
-      // Update both documents
-      await updateDoc(volunteerDocRef, { 
-        pendingWorks: updatedPendingWorks 
-      });
-      
-      await updateDoc(doc(db, "foodRequests", work.id), {
-        status: "Accepted",
-        acceptedBy: user.uid,
-        acceptedByVolunteer: user.displayName || "Volunteer",
-        acceptedAt: new Date().toISOString()
-      });
-      
-      // Update local state
-      setPendingWorks(updatedPendingWorks);
-      
+    try {
+      const user = auth.currentUser;
+      if (user && work.id) {
+        const volunteerDocRef = doc(db, "Volunteers", user.uid);
+        
+        // Get current volunteer data
+        const volunteerDoc = await getDoc(volunteerDocRef);
+        const volunteerData = volunteerDoc.exists() ? volunteerDoc.data() : {};
+        const existingPendingWorks = volunteerData.pendingWorks || [];
+        
+        // Create work object
+        const acceptedWork = {
+          id: work.id,
+          title: work.title || "Food Request",
+          type: "food_request",
+          status: "Accepted",
+          pickedAt: new Date().toISOString(),
+          volunteerId: user.uid,
+          volunteerName: user.displayName || "Volunteer",
+          foodItem: work.foodItem,
+          organization: work.organization,
+          availableDate: work.availableDate,
+          availableTime: work.availableTime,
+          requiredBefore: work.requiredBefore,
+          priority: work.priority
+        };
+        
+        const updatedPendingWorks = [...existingPendingWorks, acceptedWork];
+        
+        // Update BOTH status fields in food request
+        await updateDoc(doc(db, "foodRequests", work.id), {
+          status: "Accepted", // Document level
+          "foodRequest.status": "Accepted", // Nested level
+          acceptedBy: user.uid,
+          acceptedByVolunteer: user.displayName || "Volunteer",
+          acceptedAt: new Date().toISOString(),
+          donor: user.displayName || "Volunteer"
+        });
+        
+        // Update volunteer document
+        await updateDoc(volunteerDocRef, { 
+          pendingWorks: updatedPendingWorks 
+        });
+        
+        // Update local state
+        setPendingWorks(updatedPendingWorks);
+        
+        // Refresh available works to remove the accepted one
+        fetchAvailableWorks();
+        
+        Toast.show({
+          type: 'success',
+          text1: 'Request Accepted!',
+          text2: 'Food request added to your pending tasks'
+        });
+      }
+    } catch (error) {
+      console.error("Error accepting request:", error);
       Toast.show({
-        type: 'success',
-        text1: 'Request Accepted!',
-        text2: 'Food request added to your pending tasks'
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to accept request: ' + error.message
       });
-      
-      fetchAvailableWorks();
     }
-  } catch (error) {
-    console.error("Error accepting request:", error);
-    Toast.show({
-      type: 'error',
-      text1: 'Error',
-      text2: 'Failed to accept request: ' + error.message
-    });
-  }
-};
+  };
 
   //Complete work functionality
   const completeWork = async (workIndex) => {
@@ -230,17 +305,19 @@ console.log('Updated pending works:', updatedPendingWorks);
         // Remove from pending works
         const updatedPendingWorks = pendingWorks.filter((_, index) => index !== workIndex);
         
-        // Add to completed works
-        const updatedCompletedWorks = [
-          ...completedWorks,
-          {
-            ...work,
-            completedAt: new Date().toISOString(),
-            status: "Completed"
-          }
-        ];
+        // Add to completed works WITH empty photos array
+        const completedWork = {
+          ...work,
+          completedAt: new Date().toISOString(),
+          status: "Completed",
+          completionPhotos: [] // Initialize empty photos array
+        };
         
+        const updatedCompletedWorks = [...completedWorks, completedWork];
         const newCompletedCount = completedWorkCount + 1;
+        
+        console.log("📝 Adding to completed works:", completedWork);
+        console.log("📊 Updated completed works array:", updatedCompletedWorks);
         
         // Update volunteer document in Firestore
         await updateDoc(doc(db, "Volunteers", user.uid), {
@@ -281,58 +358,80 @@ console.log('Updated pending works:', updatedPendingWorks);
     }
   };
 
-  const renderAvailableWorks = () => {
-    return (
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>🍲 Available Food Requests ({availableWorks.length})</Text>
-        
-        {availableWorks.length === 0 ? (
-          <Text style={styles.noData}>No pending food requests available.</Text>
-        ) : (
-          availableWorks.map((work, index) => (
-            <View key={work.id} style={styles.workCard}>
-              {/* ... your work card content ... */}
-              <TouchableOpacity 
-                style={styles.pickButton}
-                onPress={() => pickWork(work)}
-              >
-                <Text style={styles.pickButtonText}>✅ Accept This Request</Text>
-              </TouchableOpacity>
-            </View>
-          ))
-        )}
-        
-        {/* Always visible navigation button */}
-        <TouchableOpacity 
-          style={styles.navigateButton}
-          onPress={() => navigation.navigate('foodRequestListScreen')}
-        >
-          <Text style={styles.navigateButtonText}>📋 Browse All Food Requests</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  };
-
   const renderPendingWorks = () => {
     return (
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>⏳ My Pending Works ({pendingWorks.length})</Text>
         {pendingWorks.length === 0 ? (
-          <Text style={styles.noData}>No pending works.</Text>
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateIcon}>📭</Text>
+            <Text style={styles.emptyStateText}>No pending works</Text>
+            <Text style={styles.emptyStateSubtext}>
+              Click "Browse All Food Requests" to find available tasks
+            </Text>
+          </View>
         ) : (
           pendingWorks.map((work, index) => (
             <View key={index} style={styles.workCard}>
-              <Text style={styles.workTitle}>{work.title}</Text>
-              <Text style={styles.workDescription}>{work.description}</Text>
-              {work.priority && (
-                <Text style={styles.workDetails}>Priority: {work.priority}</Text>
+              {/* Header with title and status */}
+              <View style={styles.cardHeader}>
+                <Text style={styles.workTitle}>{work.title || work.foodItem || "Food Request"}</Text>
+                <View style={[
+                  styles.statusBadge,
+                  work.priority === "High" && styles.highPriorityBadge,
+                  work.priority === "Urgent" && styles.urgentPriorityBadge
+                ]}>
+                  <Text style={styles.statusText}>
+                    {work.priority || "Medium"}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Organization */}
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>🏢 Organization:</Text>
+                <Text style={styles.detailValue}>
+                  {work.organization?.name || work.organization || "Unknown Organization"}
+                </Text>
+              </View>
+
+              {/* Food Item */}
+              {work.foodItem && (
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>🍲 Food Item:</Text>
+                  <Text style={styles.detailValue}>{work.foodItem}</Text>
+                </View>
               )}
-              {work.organization?.name && (
-                <Text style={styles.workNGO}>Organization: {work.organization.name}</Text>
+
+              {/* Pickup Details */}
+              {work.availableDate && (
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>📅 Pickup:</Text>
+                  <Text style={styles.detailValue}>
+                    {new Date(work.availableDate).toLocaleDateString()} at {work.availableTime || "specified time"}
+                  </Text>
+                </View>
               )}
-              <Text style={styles.pickedDate}>
-                📅 Accepted: {work.pickedAt ? new Date(work.pickedAt).toLocaleDateString() : 'Recently'}
-              </Text>
+
+              {/* Required Before */}
+              {work.requiredBefore && (
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>⏰ Required Before:</Text>
+                  <Text style={styles.detailValue}>
+                    {new Date(work.requiredBefore).toLocaleDateString()}
+                  </Text>
+                </View>
+              )}
+
+              {/* Accepted Date */}
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>✅ Accepted:</Text>
+                <Text style={styles.detailValue}>
+                  {work.pickedAt ? new Date(work.pickedAt).toLocaleDateString() : 'Recently'}
+                </Text>
+              </View>
+
+              {/* Complete Button */}
               <TouchableOpacity 
                 style={styles.completeButton}
                 onPress={() => completeWork(index)}
@@ -342,42 +441,6 @@ console.log('Updated pending works:', updatedPendingWorks);
             </View>
           ))
         )}
-      </View>
-    );
-  };
-
-  const renderAchievements = () => {
-    return (
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>🏆 My Achievements</Text>
-        <View style={styles.achievementsContainer}>
-          <Text style={styles.achievementText}>
-            📊 Completed Works: <Text style={styles.count}>{completedWorkCount}</Text>
-          </Text>
-          
-          <View style={styles.medalsContainer}>
-            <Text style={styles.medalsTitle}>Medals Earned:</Text>
-            <View style={styles.medalsList}>
-              {medals.includes('bronze') ? (
-                <Text style={styles.medal}>🥉 Bronze</Text>
-              ) : (
-                <Text style={styles.medalLocked}>🔒 Bronze (need 1+ works)</Text>
-              )}
-              
-              {medals.includes('silver') ? (
-                <Text style={styles.medal}>🥈 Silver</Text>
-              ) : (
-                <Text style={styles.medalLocked}>🔒 Silver (need 5+ works)</Text>
-              )}
-              
-              {medals.includes('gold') ? (
-                <Text style={styles.medal}>🥇 Gold</Text>
-              ) : (
-                <Text style={styles.medalLocked}>🔒 Gold (need 10+ works)</Text>
-              )}
-            </View>
-          </View>
-        </View>
       </View>
     );
   };
@@ -505,89 +568,111 @@ console.log('Updated pending works:', updatedPendingWorks);
     }
   };
 
-  const pickCompletedWork = () => {
-    launchImageLibrary(
-      { mediaType: 'photo', quality: 1, includeBase64: true },
-      async (response) => {
-        if (!response.didCancel && !response.errorCode) {
-          const file = response.assets[0];
-          const fileSizeLimit = 2 * 1024 * 1024; // 2 MB
+  const pickCompletedWorkPhoto = (workIndex) => {
+  console.log("📸 Uploading photo for work index:", workIndex);
+  console.log("📁 Current completed works:", completedWorks);
+  
+  launchImageLibrary(
+    { mediaType: 'photo', quality: 1, includeBase64: true },
+    async (response) => {
+      if (!response.didCancel && !response.errorCode) {
+        const file = response.assets[0];
+        const fileSizeLimit = 2 * 1024 * 1024; // 2 MB
 
-          if (file.fileSize > fileSizeLimit) {
-            Toast.show({
-              type: 'error',
-              text1: 'File Too Large',
-              text2: 'Please select an image smaller than 2MB.',
-              position: 'top'
-            });
-            return;
-          }
-
-          // Check maximum photos limit
-          const MAX_WORK_PHOTOS = 3;
-          if (completedWorks.length >= MAX_WORK_PHOTOS) {
-            Toast.show({
-              type: 'error',
-              text1: 'Maximum Photos Reached',
-              text2: `You can only upload up to ${MAX_WORK_PHOTOS} work photos.`,
-              position: 'top'
-            });
-            return;
-          }
-
-          setUploading(true);
-          
-          // FIX: Determine the correct MIME type
-          let mimeType = file.type;
-          if (!mimeType || mimeType === 'undefined') {
-            // Fallback to common image MIME types based on file extension or default to jpeg
-            if (file.fileName) {
-              if (file.fileName.toLowerCase().endsWith('.png')) {
-                mimeType = 'image/png';
-              } else if (file.fileName.toLowerCase().endsWith('.gif')) {
-                mimeType = 'image/gif';
-              } else {
-                mimeType = 'image/jpeg'; // Default to jpeg
-              }
-            } else {
-              mimeType = 'image/jpeg'; // Final fallback
-            }
-          }
-          
-          console.log("Detected MIME type:", mimeType);
-          
-          // Convert to Base64 string with correct MIME type
-          const base64Image = `data:${mimeType};base64,${file.base64}`;
-          const updatedWorks = [...completedWorks, base64Image];
-          
-          console.log("Adding new work photo. New array length:", updatedWorks.length);
-          
-          try {
-            const user = auth.currentUser;
-            if (user) {
-              await updateDoc(doc(db, "Volunteers", user.uid), { 
-                completedWorks: updatedWorks 
-              });
-              setCompletedWorks(updatedWorks);
-              Toast.show({ 
-                type: 'success', 
-                text1: 'Work photo added!',
-                text2: `${updatedWorks.length}/${MAX_WORK_PHOTOS} photos`
-              });
-            }
-          } catch (error) {
-            console.error("Error adding work photo:", error);
-            Toast.show({ 
-              type: 'error', 
-              text1: 'Failed to add work photo' 
-            });
-          }
-          
-          setUploading(false);
+        if (file.fileSize > fileSizeLimit) {
+          Toast.show({
+            type: 'error',
+            text1: 'File Too Large',
+            text2: 'Please select an image smaller than 2MB.',
+            position: 'top'
+          });
+          return;
         }
+
+        // Check if work exists
+        if (!completedWorks[workIndex]) {
+          Toast.show({
+            type: 'error',
+            text1: 'Work Not Found',
+            text2: 'Completed work not found for photo upload.',
+            position: 'top'
+          });
+          return;
+        }
+
+        // Check maximum photos limit per work
+        const MAX_PHOTOS_PER_WORK = 3;
+        const currentWork = completedWorks[workIndex];
+        
+        const currentPhotos = currentWork.completionPhotos || [];
+        if (currentPhotos.length >= MAX_PHOTOS_PER_WORK) {
+          Toast.show({
+            type: 'error',
+            text1: 'Maximum Photos Reached',
+            text2: `You can only upload up to ${MAX_PHOTOS_PER_WORK} photos per work.`,
+            position: 'top'
+          });
+          return;
+        }
+
+        setUploading(true);
+        
+        // Determine MIME type
+        let mimeType = file.type;
+        if (!mimeType || mimeType === 'undefined') {
+          if (file.fileName) {
+            if (file.fileName.toLowerCase().endsWith('.png')) {
+              mimeType = 'image/png';
+            } else if (file.fileName.toLowerCase().endsWith('.gif')) {
+              mimeType = 'image/gif';
+            } else {
+              mimeType = 'image/jpeg';
+            }
+          } else {
+            mimeType = 'image/jpeg';
+          }
+        }
+        
+        console.log("Detected MIME type:", mimeType);
+        
+        // Convert to Base64 string
+        const base64Image = `data:${mimeType};base64,${file.base64}`;
+        
+        // Add photo to specific work
+        const updatedCompletedWorks = [...completedWorks];
+        if (!updatedCompletedWorks[workIndex].completionPhotos) {
+          updatedCompletedWorks[workIndex].completionPhotos = [];
+        }
+        updatedCompletedWorks[workIndex].completionPhotos.push(base64Image);
+        
+        console.log("🔄 Updated work with photo:", updatedCompletedWorks[workIndex]);
+        
+        try {
+          const user = auth.currentUser;
+          if (user) {
+            await updateDoc(doc(db, "Volunteers", user.uid), { 
+              completedWorks: updatedCompletedWorks 
+            });
+            setCompletedWorks(updatedCompletedWorks);
+            Toast.show({ 
+              type: 'success', 
+              text1: 'Work photo added!',
+              text2: `Photo ${updatedCompletedWorks[workIndex].completionPhotos.length}/${MAX_PHOTOS_PER_WORK}`
+            });
+          }
+        } catch (error) {
+          console.error("Error adding work photo:", error);
+          Toast.show({ 
+            type: 'error', 
+            text1: 'Failed to add work photo' 
+          });
+        }
+        
+        setUploading(false);
       }
-    );
-  };
+    }
+  );
+};
 
   const deleteCompletedWork = async (index) => {
     console.log("Delete clicked for index:", index);
@@ -937,18 +1022,23 @@ console.log('Updated pending works:', updatedPendingWorks);
               </View>
 
               {/* Available Works Section */}
-              {renderAvailableWorks()}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Find New Tasks</Text>
+                <TouchableOpacity 
+                  style={styles.navigateButton}
+                  onPress={() => navigation.navigate('foodRequestListScreen')}
+                >
+                  <Text style={styles.navigateButtonText}>📋 Browse All Food Requests</Text>
+                </TouchableOpacity>
+              </View>
 
               {/* Pending Works Section */}
               {renderPendingWorks()}
 
-              {/*Achivements Section*/}
-              {renderAchievements()}
-
               {/* Medals Section */}
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Your Medals</Text>
-                <Text style={styles.workCount}>Completed Works: {completedWorkCount}</Text>
+                <Text style={styles.sectionTitle}>🏆 My Medals</Text>
+                <Text style={styles.workCount}>📊 Completed Works: {completedWorkCount}</Text>
                 
                 <View style={styles.medalsContainer}>
                   {medals.includes("bronze") && (
@@ -987,7 +1077,7 @@ console.log('Updated pending works:', updatedPendingWorks);
                 
                 <TouchableOpacity 
                   style={[styles.selectButton, uploading && styles.disabledButton]} 
-                  onPress={pickCompletedWork}
+                  onPress={pickCompletedWorkPhoto }
                   disabled={uploading}
                 >
                   <Icon name="add-a-photo" size={20} color="#fff" style={styles.buttonIcon} />
@@ -1498,77 +1588,140 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
 
-  // Work Cards Styles
-  workCard: {
-    backgroundColor: '#F8F5F0',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 10,
-    borderLeftWidth: 4,
-    borderLeftColor: '#4682B4', // Steel blue
+  section: {
+    marginBottom: 25,
+    paddingHorizontal: 16,
   },
-  pendingWorkCard: {
-    backgroundColor: '#FFF8E1',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 10,
-    borderLeftWidth: 4,
-    borderLeftColor: '#FFA500', // Orange gold
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2c5530',
+    marginBottom: 15,
+    textAlign: 'center',
   },
-  workTitle: {
-    fontSize: 16,
+  
+  // Empty State
+  emptyState: {
+    alignItems: 'center',
+    padding: 40,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    borderStyle: 'dashed',
+  },
+  emptyStateIcon: {
+    fontSize: 48,
+    marginBottom: 10,
+  },
+  emptyStateText: {
+    fontSize: 18,
     fontWeight: '600',
-    color: '#5A3F2B',
+    color: '#6c757d',
     marginBottom: 5,
   },
-  workDescription: {
+  emptyStateSubtext: {
     fontSize: 14,
-    color: '#6B8E23',
-    marginBottom: 8,
-    lineHeight: 18,
+    color: '#adb5bd',
+    textAlign: 'center',
   },
-  workNGO: {
-    fontSize: 13,
-    color: '#4682B4',
-    fontStyle: 'italic',
-    marginBottom: 8,
+  
+  // Work Card
+  workCard: {
+    backgroundColor: 'white',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    borderLeftWidth: 4,
+    borderLeftColor: '#4CAF50',
   },
-  pickedDate: {
+  
+  // Card Header
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  workTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2c5530',
+    flex: 1,
+    marginRight: 10,
+  },
+  
+  // Priority Badge
+  statusBadge: {
+    backgroundColor: '#ffc107',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    minWidth: 60,
+  },
+  highPriorityBadge: {
+    backgroundColor: '#fd7e14',
+  },
+  urgentPriorityBadge: {
+    backgroundColor: '#dc3545',
+  },
+  statusText: {
+    color: 'white',
     fontSize: 12,
-    color: '#8A7B6B',
-    marginBottom: 10,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
-  pickWorkButton: {
+  
+  // Detail Rows
+  detailRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#6B8E23', // Olive green
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 6,
-    alignSelf: 'flex-start',
+    marginBottom: 8,
+    alignItems: 'flex-start',
   },
-  pickWorkButtonText: {
-    color: '#FFFFFF',
+  detailLabel: {
     fontSize: 14,
-    fontWeight: '500',
-    marginLeft: 5,
+    fontWeight: '600',
+    color: '#495057',
+    width: 120,
   },
-  completeWorkButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#6B8E23', // Olive green
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 6,
-    alignSelf: 'flex-start',
-  },
-  completeWorkButtonText: {
-    color: '#FFFFFF',
+  detailValue: {
     fontSize: 14,
-    fontWeight: '500',
-    marginLeft: 5,
+    color: '#6c757d',
+    flex: 1,
+  },
+  
+  // Complete Button
+  completeButton: {
+    backgroundColor: '#28a745',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  completeButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  
+  // No Data Text
+  noData: {
+    textAlign: 'center',
+    color: '#6c757d',
+    fontSize: 16,
+    fontStyle: 'italic',
+    marginVertical: 20,
   },
 
   // Medals Section
