@@ -42,6 +42,13 @@ const Organization = ({ route }) => {
           ...m.data()
         }))
 
+        // fetch events subcollection
+        const eventsSnap = await getDocs(collection(db, "Organizations", id, "events"))
+        const events = eventsSnap.docs.map(e => ({
+          id: e.id,
+          ...e.data()
+        }))
+
         setOrganizationData({
           name: data.name,
           description: data.description,
@@ -51,7 +58,7 @@ const Organization = ({ route }) => {
             memberCount: members.length,
             createdDate: data.createdDate
           },
-          events: []
+          events
         })
       } catch (err) {
         console.error(err)
@@ -105,7 +112,7 @@ const Organization = ({ route }) => {
         <Text style={styles.primaryHeading}>Events</Text>
         <TouchableOpacity
           style={styles.button}
-          onPress={() => navigator.navigate('createEvent')}
+          onPress={() => navigator.navigate('createEvent', { id })}
         >
           <Text style={styles.buttonText}>Manage events</Text>
         </TouchableOpacity>
@@ -115,8 +122,9 @@ const Organization = ({ route }) => {
         <OrganizationEvent
           key={index}
           image={event.image}
-          eventName={event.eventName}
-          datetime={new Date(event.datetime)}
+          name={event.name}
+          description={event.description}
+          eventDateTime={new Date(event.eventDateTime.toDate())}
           venue={event.venue}
         />
       ))}
