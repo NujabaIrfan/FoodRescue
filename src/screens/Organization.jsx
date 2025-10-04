@@ -112,7 +112,7 @@ const Organization = ({ route }) => {
         <Text style={styles.primaryHeading}>Events</Text>
         <TouchableOpacity
           style={styles.button}
-          onPress={() => navigator.navigate('createEvent', { id })}
+          onPress={() => navigator.navigate('organizationEvents', { id })}
         >
           <Text style={styles.buttonText}>Manage events</Text>
         </TouchableOpacity>
@@ -124,7 +124,7 @@ const Organization = ({ route }) => {
           image={event.image}
           name={event.name}
           description={event.description}
-          eventDateTime={new Date(event.eventDateTime.toDate())}
+          eventDateTime={event.eventDateTime === 0 ? 0 : new Date(event.eventDateTime.toDate())}
           venue={event.venue}
         />
       ))}
