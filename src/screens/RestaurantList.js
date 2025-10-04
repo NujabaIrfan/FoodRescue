@@ -48,6 +48,17 @@ const RestaurantList = () => {
           <Icon name="account-circle" size={28} color="#fff" />
         </TouchableOpacity>
       ),
+       headerLeft: () => (
+            <TouchableOpacity 
+                onPress={() => navigation.reset({
+                    index: 0,
+                    routes: [{ name: 'home' }], 
+                })}
+                style={{ paddingHorizontal: 16 }}
+            >
+                <Icon name="arrow-back" size={24} color="#fff" />
+            </TouchableOpacity>
+        ),
     });
   }, [navigation]);
 

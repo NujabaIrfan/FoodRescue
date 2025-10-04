@@ -244,7 +244,7 @@ const SurplusManagement = () => {
     };
 
     const handleViewRequests = () => {
-        navigation.navigate('requests'); // Navigate to a screen named 'requests'
+        navigation.navigate('donorFoodRequest'); // Navigate to a screen named 'donorFoodRequest'
     };
 
     if (!permission) {
@@ -483,8 +483,8 @@ const styles = StyleSheet.create({
     statusText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
     cardActions: { justifyContent: 'space-around', padding: 12, flexDirection: 'column' },
     actionButton: { padding: 8 },
-    modalContainer: { flex: 1, backgroundColor: '#000000aa', justifyContent: 'center' },
-    modalContent: { backgroundColor: '#fff', margin: 20, borderRadius: 10, padding: 16, maxHeight: '90%' },
+    modalContainer: { flex: 1, backgroundColor: '#000000aa', justifyContent: 'center', padding: 20 },
+    modalContent: { backgroundColor: '#fff', borderRadius: 10, padding: 16, maxHeight: '85%' },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#333' },
     modalScrollViewContent: { flexGrow: 1, paddingVertical: 12 },
@@ -495,7 +495,7 @@ const styles = StyleSheet.create({
     input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 6, padding: 10, fontSize: 14, backgroundColor: '#f9f9f9' },
     textArea: { height: 80, textAlignVertical: 'top' },
     pickerContainer: { borderWidth: 1, borderColor: '#ccc', borderRadius: 6, overflow: 'hidden' },
-    picker: { height: 40, width: '100%' },
+   picker: { width: '100%', minHeight: 50,  fontSize: 16,},
     datePickerButton: { padding: 10, borderWidth: 1, borderColor: '#ccc', borderRadius: 6, backgroundColor: '#f9f9f9', alignItems: 'center' },
     datePickerButtonText: { fontSize: 14 },
     modalActions: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 },
