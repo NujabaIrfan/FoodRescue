@@ -6,6 +6,8 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc, collection, getDocs } from 'firebase/firestore';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { Modal } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { ScrollView } from 'react-native-web';
 
 const { width } = Dimensions.get('window');
 
@@ -16,7 +18,7 @@ export default function VolunteerSection() {
   const [showMenu, setShowMenu] = useState(false);
   const [volunteers, setVolunteers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState('medals'); // Default sort by medals
+  const [sortBy, setSortBy] = useState('medals'); 
   const animation = useRef(new Animated.Value(0)).current;
 
   // Medal priority for sorting (higher number = higher priority)
@@ -28,7 +30,21 @@ export default function VolunteerSection() {
   };
 
   useEffect(() => {
-    navigation.setOptions({ title: 'Volunteer Network' });
+    navigation.setOptions({ title: 'Volunteer Network',
+      headerBackground: () => (
+        <LinearGradient
+          colors={['#87b34eff', '#d5d5b1ff', '#87b34eff']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{ flex: 1 }}
+        />
+      ),
+      headerTintColor: '#5A3F2B', 
+      headerTitleStyle: {
+        fontWeight: 'bold',
+        color: '#fff',
+      },
+    });
   }, [navigation]);
 
   // Fetch current user and profile photo
@@ -76,7 +92,6 @@ export default function VolunteerSection() {
             address: volunteerData.address || 'Not provided',
             preferredArea: volunteerData.preferredArea || 'Not specified',
             joinDate: volunteerData.joinDate || 'Recent',
-            // ✅ ADD MEDAL-RELATED DATA
             medals: volunteerData.medals || [],
             completedWorkCount: volunteerData.completedWorkCount || 0,
             pendingWorks: volunteerData.pendingWorks || []
@@ -225,7 +240,7 @@ export default function VolunteerSection() {
         {/* Availability Badge */}
         <View style={[styles.availabilityBadge, { backgroundColor: getAvailabilityColor(isAvailable) }]}></View>
 
-        <View style={styles.volunteerCard}>
+        <LinearGradient colors={['rgba(255, 255, 255, 0.35)', 'rgba(255, 255, 255, 0.15)']} style={styles.volunteerCard}>
           {/* Volunteer Header with Medal Info */}
           <View style={styles.cardHeader}>
             <View style={styles.profileSection}>
@@ -302,33 +317,10 @@ export default function VolunteerSection() {
               <Text style={styles.rankText}>Rank #{index + 1}</Text>
             </View>
           </View>
-        </View>
+        </LinearGradient>
       </View>
     );
   };
-
-  // Add sorting options
-  const SortingOptions = () => (
-    <View style={styles.sortingContainer}>
-      <Text style={styles.sortingTitle}>Sort by:</Text>
-      <TouchableOpacity 
-        style={[styles.sortButton, sortBy === 'medals' && styles.activeSortButton]}
-        onPress={() => setSortBy('medals')}
-      >
-        <Text style={[styles.sortButtonText, sortBy === 'medals' && styles.activeSortText]}>
-          🏆 Medals
-        </Text>
-      </TouchableOpacity>
-      <TouchableOpacity 
-        style={[styles.sortButton, sortBy === 'completed' && styles.activeSortButton]}
-        onPress={() => setSortBy('completed')}
-      >
-        <Text style={[styles.sortButtonText, sortBy === 'completed' && styles.activeSortText]}>
-          ✅ Completed Works
-        </Text>
-      </TouchableOpacity>
-    </View>
-  );
 
   // Helper function for skill icons
   const getSkillIcon = (skill) => {
@@ -342,278 +334,304 @@ export default function VolunteerSection() {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Enhanced Header */}
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <View>
-            <Text style={styles.headerTitle}>Volunteer Network</Text>
-            <Text style={styles.headerSubtitle}>Connect with our dedicated volunteers</Text>
+    <LinearGradient
+      colors={['#87b34eff', '#F5F5DC', '#87b34eff']}  // Steel Blue → Midnight Blue
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.gradientBackground}>
+        <ScrollView style={styles.container}>
+          {/* Enhanced Header */}
+          <View style={styles.header}>
+            <View style={styles.headerContent}>
+              <View>
+                <Text style={styles.headerTitle}>Volunteer Network</Text>
+                <Text style={styles.headerSubtitle}>Connect with our dedicated volunteers</Text>
+              </View>
+              
+              <View style={styles.profileContainer}>
+                {user ? (
+                  <View style={styles.profileDropdownWrapper}>
+                    <TouchableOpacity 
+                      onPress={() => setShowMenu(!showMenu)} 
+                      style={styles.profileButton}
+                    >
+                      <Image source={{ uri: userPhoto }} style={styles.profileImage} />
+                      <View style={styles.onlineIndicator} />
+                    </TouchableOpacity>
+
+                    <Modal
+                      transparent={true}
+                      visible={showMenu}
+                      animationType="fade"
+                      onRequestClose={() => setShowMenu(false)}
+                    >
+                      <TouchableWithoutFeedback onPress={() => setShowMenu(false)}>
+                        <View style={styles.modalOverlay}>
+                          <View style={styles.modalDropdownMenu}>
+                            <TouchableOpacity
+                              onPress={() => {
+                                setShowMenu(false);
+                                navigation.navigate('volunteerProfile');
+                              }}
+                              style={[styles.dropdownButton, styles.profileDropdownButton]}
+                            >
+                              <MaterialIcons name="person" size={20} color="#333" style={styles.dropdownIcon} />
+                              <Text style={styles.dropdownButtonText}>My Profile</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                              onPress={handleSignOut}
+                              style={[styles.dropdownButton, styles.logoutDropdownButton]}
+                            >
+                              <MaterialIcons name="logout" size={20} color="#fff" style={styles.dropdownIcon} />
+                              <Text style={[styles.dropdownButtonText, styles.logoutDropdownText]}>Sign Out</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      </TouchableWithoutFeedback>
+                    </Modal>
+                  </View>
+                ) : (
+                  <TouchableOpacity 
+                    style={styles.loginButton} 
+                    onPress={() => navigation.navigate('volunteerLogin')}
+                  >
+                    <Text style={styles.loginText}>Join Us</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+
+            {/* Stats Overview */}
+            <View style={styles.statsOverview}>
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>{volunteers.length}</Text>
+                <Text style={styles.statLabel}>Total Volunteers</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={[styles.statNumber, styles.goldStat]}>
+                  {volunteers.filter(v => v.medals?.includes('gold')).length}
+                </Text>
+                <Text style={styles.statLabel}>Gold 🥇</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={[styles.statNumber, styles.silverStat]}>
+                  {volunteers.filter(v => v.medals?.includes('silver')).length}
+                </Text>
+                <Text style={styles.statLabel}>Silver 🥈</Text>
+              </View>
+            </View>
           </View>
-          
-          <View style={styles.profileContainer}>
-            {user ? (
-              <View style={styles.profileDropdownWrapper}>
+
+          {/* Main Content */}
+          <View style={styles.content}>
+            {loading ? (
+              <View style={styles.loadingContainer}>
+                <MaterialIcons name="people" size={60} color="#3498db" />
+                <Text style={styles.loadingTitle}>Loading Volunteers</Text>
+                <Text style={styles.loadingSubtitle}>Connecting to our network...</Text>
+              </View>
+            ) : volunteers.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <MaterialIcons name="group-off" size={80} color="#bdc3c7" />
+                <Text style={styles.emptyTitle}>No Volunteers Yet</Text>
+                <Text style={styles.emptySubtitle}>Be the first to join our volunteer network!</Text>
                 <TouchableOpacity 
-                  onPress={() => setShowMenu(!showMenu)} 
-                  style={styles.profileButton}
+                  style={styles.ctaButton}
+                  onPress={() => navigation.navigate('volunteerLogin')}
                 >
-                  <Image source={{ uri: userPhoto }} style={styles.profileImage} />
-                  <View style={styles.onlineIndicator} />
+                  <Text style={styles.ctaText}>Become a Volunteer</Text>
                 </TouchableOpacity>
-
-                <Modal
-                  transparent={true}
-                  visible={showMenu}
-                  animationType="fade"
-                  onRequestClose={() => setShowMenu(false)}
-                >
-                  <TouchableWithoutFeedback onPress={() => setShowMenu(false)}>
-                    <View style={styles.modalOverlay}>
-                      <View style={styles.modalDropdownMenu}>
-                        <TouchableOpacity
-                          onPress={() => {
-                            setShowMenu(false);
-                            navigation.navigate('volunteerProfile');
-                          }}
-                          style={[styles.dropdownButton, styles.profileDropdownButton]}
-                        >
-                          <MaterialIcons name="person" size={20} color="#333" style={styles.dropdownIcon} />
-                          <Text style={styles.dropdownButtonText}>My Profile</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                          onPress={handleSignOut}
-                          style={[styles.dropdownButton, styles.logoutDropdownButton]}
-                        >
-                          <MaterialIcons name="logout" size={20} color="#fff" style={styles.dropdownIcon} />
-                          <Text style={[styles.dropdownButtonText, styles.logoutDropdownText]}>Sign Out</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  </TouchableWithoutFeedback>
-                </Modal>
               </View>
             ) : (
-              <TouchableOpacity 
-                style={styles.loginButton} 
-                onPress={() => navigation.navigate('volunteerLogin')}
-              >
-                <Text style={styles.loginText}>Join Us</Text>
-              </TouchableOpacity>
+              <FlatList
+                data={volunteers}
+                renderItem={renderVolunteerItem}
+                keyExtractor={(item) => item.id}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.listContainer}
+                ListHeaderComponent={
+                  <View style={styles.listHeader}>
+                    <Text style={styles.listTitle}>Volunteer Leaderboard</Text>
+                    <Text style={styles.listSubtitle}>
+                      Ranked by achievements and contributions
+                    </Text>
+                  </View>
+                }
+              />
             )}
           </View>
-        </View>
-
-        {/* Stats Overview */}
-        <View style={styles.statsOverview}>
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{volunteers.length}</Text>
-            <Text style={styles.statLabel}>Total Volunteers</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={[styles.statNumber, styles.goldStat]}>
-              {volunteers.filter(v => v.medals?.includes('gold')).length}
-            </Text>
-            <Text style={styles.statLabel}>Gold 🥇</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={[styles.statNumber, styles.silverStat]}>
-              {volunteers.filter(v => v.medals?.includes('silver')).length}
-            </Text>
-            <Text style={styles.statLabel}>Silver 🥈</Text>
-          </View>
-        </View>
-      </View>
-
-      {/* Sorting Options */}
-      <SortingOptions />
-
-      {/* Main Content */}
-      <View style={styles.content}>
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <MaterialIcons name="people" size={60} color="#3498db" />
-            <Text style={styles.loadingTitle}>Loading Volunteers</Text>
-            <Text style={styles.loadingSubtitle}>Connecting to our network...</Text>
-          </View>
-        ) : volunteers.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <MaterialIcons name="group-off" size={80} color="#bdc3c7" />
-            <Text style={styles.emptyTitle}>No Volunteers Yet</Text>
-            <Text style={styles.emptySubtitle}>Be the first to join our volunteer network!</Text>
-            <TouchableOpacity 
-              style={styles.ctaButton}
-              onPress={() => navigation.navigate('volunteerLogin')}
-            >
-              <Text style={styles.ctaText}>Become a Volunteer</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <FlatList
-            data={volunteers}
-            renderItem={renderVolunteerItem}
-            keyExtractor={(item) => item.id}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.listContainer}
-            ListHeaderComponent={
-              <View style={styles.listHeader}>
-                <Text style={styles.listTitle}>Volunteer Leaderboard</Text>
-                <Text style={styles.listSubtitle}>
-                  Ranked by achievements and contributions
-                </Text>
-              </View>
-            }
-          />
-        )}
-      </View>
-    </View>
+        </ScrollView>
+      
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  gradientBackground: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
   container: { 
     flex: 1, 
-    backgroundColor: '#F5F5DC', // Beige background from palette
   },
   
-  // Header Styles
+  // ========== HEADER STYLES ==========
   header: {
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 20,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    shadowColor: '#5A3F2B', // Brown shadow
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
+    paddingTop: 15,
+    paddingBottom: 24,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    shadowColor: '#5A3F2B',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 10,
   },
   headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 20,
+    marginBottom: 24,
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: '800',
-    color: '#5A3F2B', // Brown text
-    marginBottom: 4,
+    color: '#5A3F2B',
+    marginBottom: 6,
+    letterSpacing: -0.5,
   },
   headerSubtitle: {
-    fontSize: 14,
-    color: '#6B8E23', // Olive green
-    fontWeight: '500',
+    fontSize: 15,
+    color: '#6B8E23',
+    fontWeight: '600',
+    opacity: 0.9,
   },
 
-  // Enhanced Stats Overview
+  // ========== STATS OVERVIEW ==========
   statsOverview: {
     flexDirection: 'row',
-    backgroundColor: '#4682B4', // Steel blue from palette
-    borderRadius: 20,
-    padding: 20,
+    backgroundColor: '#4682B4',
+    borderRadius: 24,
+    padding: 24,
     alignItems: 'center',
-    shadowColor: '#5A3F2B',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowColor: '#2C5282',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
   },
   statItem: {
     flex: 1,
     alignItems: 'center',
   },
   statNumber: {
-    fontSize: 22,
-    fontWeight: '800',
+    fontSize: 28,
+    fontWeight: '900',
     color: '#FFFFFF',
-    marginBottom: 2,
-    textShadowColor: 'rgba(90,63,43,0.2)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    marginBottom: 4,
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+    letterSpacing: -0.5,
   },
   goldStat: {
-    color: '#FFA500', // Orange gold from palette
-    textShadowColor: 'rgba(255,165,0,0.3)',
+    color: '#FFA500',
+    textShadowColor: 'rgba(255,165,0,0.4)',
   },
   silverStat: {
     color: '#F5F5F5',
-    textShadowColor: 'rgba(245,245,245,0.3)',
+    textShadowColor: 'rgba(0,0,0,0.2)',
   },
   statLabel: {
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.9)',
-    fontWeight: '600',
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.95)',
+    fontWeight: '700',
     textAlign: 'center',
+    letterSpacing: 0.3,
   },
   statDivider: {
-    width: 1,
-    height: 35,
-    backgroundColor: 'rgba(255,255,255,0.3)',
+    width: 2,
+    height: 44,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    borderRadius: 1,
   },
 
-  // Enhanced Sorting Options
+  // ========== SORTING OPTIONS ==========
   sortingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 16,
     paddingHorizontal: 20,
     backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E8E8E8',
+    borderBottomWidth: 2,
+    borderBottomColor: '#F0EDE5',
   },
   sortingTitle: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
     color: '#5A3F2B',
-    marginRight: 12,
+    marginRight: 16,
+    letterSpacing: 0.2,
   },
   sortButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#F5F5DC', // Beige
-    borderWidth: 1,
-    borderColor: '#D4C9B8',
-    marginRight: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 24,
+    backgroundColor: '#FAF8F3',
+    borderWidth: 2,
+    borderColor: '#E8E0D5',
+    marginRight: 10,
+    shadowColor: '#5A3F2B',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   activeSortButton: {
-    backgroundColor: '#6B8E23', // Olive green
+    backgroundColor: '#6B8E23',
     borderColor: '#5A7A1A',
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
   },
   sortButtonText: {
-    fontSize: 13,
+    fontSize: 14,
     color: '#5A3F2B',
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   activeSortText: {
     color: '#FFFFFF',
   },
 
-  // Content Area
+  // ========== CONTENT AREA ==========
   content: {
     flex: 1,
-    paddingTop: 10,
-    backgroundColor: '#F5F5DC',
+    paddingTop: 12,
+    backgroundColor: '#F5F5RD', // Beige from palette
+  },
+  listContainer: {
+    paddingBottom: 24,
   },
 
-  // Enhanced Volunteer Card
+  // ========== VOLUNTEER CARD ==========
   cardContainer: {
     marginHorizontal: 16,
-    marginBottom: 16,
+    marginBottom: 20,
     position: 'relative',
   },
   volunteerCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    padding: 0,
+    padding: 10,
     shadowColor: '#5A3F2B',
-    shadowOffset: { width: 0, height: 6 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 6,
@@ -622,14 +640,14 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
 
-  // Rank Indicator (Left Side)
+  // ========== RANK INDICATOR ==========
   rankIndicator: {
     position: 'absolute',
     left: 0,
     top: 0,
     bottom: 0,
     width: 50,
-    backgroundColor: '#6B8E23', // Olive green
+    backgroundColor: '#6B8E23',
     justifyContent: 'center',
     alignItems: 'center',
     borderRightWidth: 1,
@@ -647,61 +665,56 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  // Medal Ribbon (Top Right)
+  // ========== MEDAL RIBBON ==========
   medalRibbon: {
     position: 'absolute',
-    top: 15,
-    right: -25,
-    paddingHorizontal: 30,
-    paddingVertical: 6,
+    top: 20,
+    right: -30,
+    paddingHorizontal: 35,
+    paddingVertical: 8,
     transform: [{ rotate: '45deg' }],
     zIndex: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 5,
   },
   ribbonText: {
     color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.5,
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 1,
     textAlign: 'center',
   },
 
-  // Availability Badge
+  // ========== AVAILABILITY BADGE ==========
   availabilityBadge: {
     position: 'absolute',
-    top: 15,
-    right: 15,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    top: 20,
+    right: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
     zIndex: 3,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 4,
   },
   availabilityText: {
     color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
 
-  // Card Content (Shifted for rank indicator)
-  cardContent: {
-    marginLeft: 50,
-    padding: 20,
-  },
-
-  // Enhanced Card Header
+  // ========== CARD HEADER ==========
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 18,
   },
   profileSection: {
     position: 'relative',
@@ -712,7 +725,7 @@ const styles = StyleSheet.create({
     height: 70,
     borderRadius: 35,
     borderWidth: 3,
-    borderColor: '#4682B4', // Steel blue border
+    borderColor: '#4682B4',
   },
   verifiedBadge: {
     position: 'absolute',
@@ -731,266 +744,97 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   volunteerName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#5A3F2B', // Brown text
-    marginBottom: 2,
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#5A3F2B',
+    marginBottom: 4,
+    letterSpacing: -0.3,
   },
   volunteerTitle: {
-    fontSize: 13,
-    color: '#4682B4', // Steel blue
-    fontWeight: '600',
-    marginBottom: 6,
-  },
-
-  // Stats Row
-  statsRow: {
-    flexDirection: 'row',
-    backgroundColor: '#F8F5F0', // Light beige
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E8E0D5',
-  },
-  statItemHorizontal: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statIcon: {
-    marginBottom: 4,
-  },
-  statNumberHorizontal: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#5A3F2B',
-    marginBottom: 2,
-  },
-  statLabelHorizontal: {
-    fontSize: 10,
-    color: '#6B8E23', // Olive green
-    fontWeight: '600',
-  },
-  statDividerHorizontal: {
-    width: 1,
-    height: 40,
-    backgroundColor: '#D4C9B8',
-    marginHorizontal: 10,
-  },
-
-  // Medal Badges
-  medalsSection: {
-    marginBottom: 16,
-  },
-  medalsTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#5A3F2B',
     marginBottom: 8,
+    letterSpacing: 0.2,
+  },
+
+  // ========== STATS ROW ==========
+  statsRow: {
+    flexDirection: 'row',
+    backgroundColor: '#F8F5F0',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 18,
+    borderWidth: 2,
+    borderColor: '#E8E0D5',
+    shadowColor: '#5A3F2B',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  statText: {
+    fontSize: 12,
+    color: '#5A3F2B',
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+
+  // ========== MEDAL BADGES ==========
+  medalsDisplay: {
+    marginBottom: 18,
   },
   medalContainer: {
     flexDirection: 'row',
-    justifyContent: 'flex-start',
-    gap: 8,
+    flexWrap: 'wrap',
+    gap: 10,
   },
   medalBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 15,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 18,
     shadowColor: '#5A3F2B',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 1,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
   },
   goldMedal: {
-    backgroundColor: '#FFF4E0', // Light orange
-    borderWidth: 1,
-    borderColor: '#FFA500', // Orange gold
+    backgroundColor: '#FFF8E7',
+    borderWidth: 2,
+    borderColor: '#FFA500',
   },
   silverMedal: {
     backgroundColor: '#F8F8F8',
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: '#C0C0C0',
   },
   bronzeMedal: {
-    backgroundColor: '#F5E6D3', // Light bronze
-    borderWidth: 1,
+    backgroundColor: '#F5E6D3',
+    borderWidth: 2,
     borderColor: '#CD7F32',
   },
   medalText: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 4,
-    color: '#5A3F2B',
-  },
-  noMedalsContainer: {
-    padding: 12,
-    backgroundColor: '#F8F5F0',
-    borderRadius: 10,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E8E0D5',
+    fontSize: 16,
+    marginLeft: 2,
   },
   noMedalText: {
-    fontSize: 12,
-    color: '#8A7B6B',
+    fontSize: 13,
+    color: '#A89C8B',
     fontStyle: 'italic',
-  },
-
-  // Skills Section
-  skillsSection: {
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#5A3F2B',
-    marginBottom: 8,
-  },
-  skillsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  skillPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E8F4E8', // Light olive green
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#D4E8D4',
-  },
-  skillIcon: {
-    marginRight: 4,
-  },
-  skillText: {
-    fontSize: 11,
-    color: '#6B8E23', // Olive green
-    fontWeight: '600',
-  },
-  noSkillsText: {
-    fontSize: 12,
-    color: '#8A7B6B',
-    fontStyle: 'italic',
-  },
-
-  // Card Footer
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#E8E0D5',
-  },
-  joinDate: {
-    fontSize: 11,
-    color: '#8A7B6B',
     fontWeight: '500',
   },
-  performanceBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#4682B4', // Steel blue
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  performanceText: {
-    fontSize: 11,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
 
-  // List Header
-  listHeader: {
-    padding: 20,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E8E0D5',
-  },
-  listTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#5A3F2B',
-    marginBottom: 4,
-  },
-  listSubtitle: {
-    fontSize: 13,
-    color: '#6B8E23',
-    lineHeight: 18,
-  },
-
-  // Loading and Empty States
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
-    backgroundColor: '#F5F5DC',
-  },
-  loadingTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#5A3F2B',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  loadingSubtitle: {
-    fontSize: 14,
-    color: '#6B8E23',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
-    backgroundColor: '#F5F5DC',
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#8A7B6B',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: '#A89C8B',
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  ctaButton: {
-    backgroundColor: '#6B8E23', // Olive green
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 25,
-    shadowColor: '#5A3F2B',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  ctaText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-
+  // ========== CONTACT SECTION ==========
   contactSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
     backgroundColor: '#F8F5F0',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 16,
-    borderWidth: 1,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 18,
+    borderWidth: 2,
     borderColor: '#E8E0D5',
   },
   contactItem: {
@@ -1000,23 +844,184 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   contactItemLeft: {
-    borderRightWidth: 1,
+    borderRightWidth: 2,
     borderRightColor: '#D4C9B8',
     paddingRight: 12,
     marginRight: 12,
   },
-  contactItemRight: {
-    // No border for the right item
-  },
   contactText: {
     fontSize: 12,
     color: '#5A3F2B',
-    marginLeft: 6,
+    marginLeft: 8,
     flex: 1,
+    fontWeight: '600',
+  },
+
+  // ========== SKILLS SECTION ==========
+  skillsSection: {
+    marginBottom: 18,
+  },
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#5A3F2B',
+    marginBottom: 10,
+    letterSpacing: 0.2,
+  },
+  skillsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  skillPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F4E8',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#C8E0C8',
+    shadowColor: '#6B8E23',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  skillIcon: {
+    marginRight: 6,
+  },
+  skillText: {
+    fontSize: 12,
+    color: '#5A7A1A',
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  noSkillsText: {
+    fontSize: 13,
+    color: '#A89C8B',
+    fontStyle: 'italic',
     fontWeight: '500',
   },
-  
-  // Profile dropdown styles
+
+  // ========== CARD FOOTER ==========
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 16,
+    borderTopWidth: 2,
+    borderTopColor: '#F0EDE5',
+  },
+  joinDate: {
+    fontSize: 12,
+    color: '#8A7B6B',
+    fontWeight: '600',
+  },
+  rankBadge: {
+    backgroundColor: '#4682B4',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+    shadowColor: '#2C5282',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+
+  // ========== LIST HEADER ==========
+  listHeader: {
+    padding: 24,
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 16,
+    marginBottom: 8,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: '#F0EDE5',
+    shadowColor: '#5A3F2B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  listTitle: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#5A3F2B',
+    marginBottom: 6,
+    letterSpacing: -0.5,
+  },
+  listSubtitle: {
+    fontSize: 14,
+    color: '#6B8E23',
+    lineHeight: 20,
+    fontWeight: '600',
+  },
+
+  // ========== LOADING & EMPTY STATES ==========
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+    backgroundColor: '#F5F5RD', // Beige from palette
+  },
+  loadingTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#5A3F2B',
+    marginTop: 20,
+    marginBottom: 8,
+    letterSpacing: -0.3,
+  },
+  loadingSubtitle: {
+    fontSize: 15,
+    color: '#6B8E23',
+    fontWeight: '500',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+    backgroundColor: '#F5F5RD', // Beige from palette
+  },
+  emptyTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#8A7B6B',
+    marginTop: 20,
+    marginBottom: 10,
+    letterSpacing: -0.3,
+  },
+  emptySubtitle: {
+    fontSize: 15,
+    color: '#A89C8B',
+    textAlign: 'center',
+    marginBottom: 28,
+    lineHeight: 22,
+    fontWeight: '500',
+  },
+  ctaButton: {
+    backgroundColor: '#6B8E23',
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 28,
+    shadowColor: '#4A6815',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  ctaText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 15,
+    letterSpacing: 0.5,
+  },
+
+  // ========== PROFILE DROPDOWN ==========
   profileContainer: {
     alignItems: 'flex-end',
   },
@@ -1024,26 +1029,53 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   profileImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     borderWidth: 3,
-    borderColor: '#4682B4', // Steel blue
+    borderColor: '#4682B4',
+    shadowColor: '#2C5282',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
   },
   onlineIndicator: {
     position: 'absolute',
     bottom: 2,
     right: 2,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#6B8E23', // Olive green
-    borderWidth: 2,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#6B8E23',
+    borderWidth: 3,
     borderColor: '#FFFFFF',
+    shadowColor: '#6B8E23',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 3,
+  },
+  loginButton: {
+    marginTop: 5,
+    marginLeft: 2,
+    backgroundColor: '#4682B4',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#2C5282',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  loginText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 12,
+    letterSpacing: 0.5,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(90, 63, 43, 0.1)', // Brown tint
+    backgroundColor: 'rgba(90, 63, 43, 0.15)',
     justifyContent: 'flex-start',
     alignItems: 'flex-end',
     paddingTop: 110,
@@ -1051,39 +1083,46 @@ const styles = StyleSheet.create({
   },
   modalDropdownMenu: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    elevation: 10,
+    borderRadius: 16,
+    elevation: 12,
     shadowColor: '#5A3F2B',
-    shadowOpacity: 0.3,
-    shadowOffset: { width: 0, height: 3 },
-    shadowRadius: 6,
-    paddingVertical: 8,
-    width: 180,
-    borderWidth: 1,
-    borderColor: '#E8E0D5',
+    shadowOpacity: 0.35,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 12,
+    paddingVertical: 10,
+    width: 190,
+    borderWidth: 2,
+    borderColor: '#F0EDE5',
   },
   dropdownButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
   },
   profileDropdownButton: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomWidth: 2,
+    borderBottomColor: '#F8F5F0',
   },
   logoutDropdownButton: {
-    backgroundColor: '#DC143C', // Crimson from palette
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 12,
+    backgroundColor: '#DC143C',
+    marginTop: 6,
+    marginHorizontal: 8,
+    borderRadius: 12,
+    shadowColor: '#8B0000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   dropdownIcon: {
     marginRight: 12,
   },
   dropdownButtonText: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#5A3F2B',
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   logoutDropdownText: {
     color: '#FFFFFF',

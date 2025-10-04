@@ -54,6 +54,8 @@ const DonorSignUp = () => {
         fontWeight: 'bold',
         fontSize: 20,
       },
+      headerLeft: () => null, 
+      headerBackVisible: false,        
     });
   }, [navigation]);
 

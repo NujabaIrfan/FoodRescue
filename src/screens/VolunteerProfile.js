@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, Switch, TextInput, Alert, Button } from "react-native";
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, Switch, TextInput, RefreshControl } from "react-native";
 import { auth, db } from "../../firebaseConfig";
-import { doc, getDoc, updateDoc, deleteDoc, collection, getDocs, addDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, deleteDoc, collection, getDocs, query, where } from "firebase/firestore";
 import { signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "firebase/auth";
 import Toast from "react-native-toast-message";
 import { useNavigation } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import { CheckBox } from "react-native-elements";
 import { launchImageLibrary } from 'react-native-image-picker';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function VolunteerProfile() {
   const navigation = useNavigation();
@@ -25,47 +25,78 @@ export default function VolunteerProfile() {
   const [completedWorks, setCompletedWorks] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [pendingWorks, setPendingWorks] = useState([]);
-  const [availableWorks, setAvailableWorks] = useState([]);
   const [medals, setMedals] = useState([]);
   const [completedWorkCount, setCompletedWorkCount] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    navigation.setOptions({ title: 'My Profile' });
+    navigation.setOptions({ title: 'My Profile',
+      headerBackground: () => (
+        <LinearGradient
+          colors={['#87b34eff', '#d5d5b1ff', '#87b34eff']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{ flex: 1 }}
+        />
+      ),
+      headerTintColor: '#5A3F2B', 
+      headerTitleStyle: {
+        fontWeight: 'bold',
+        color: '#fff',
+      },
+    });
   }, [navigation]);
   
-  useEffect(() => {
-    const fetchVolunteer = async () => {
-      try {
-        const user = auth.currentUser;
-        if (user) {
-          const docRef = doc(db, "Volunteers", user.uid);
-          const docSnap = await getDoc(docRef);
+  const fetchVolunteerData = async () => {
+    try {
+      const user = auth.currentUser;
+      if (user) {
+        const docRef = doc(db, "Volunteers", user.uid);
+        const docSnap = await getDoc(docRef);
 
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            setVolunteer(data);
-            setForm(data);
-            setSkills(data.skills || {});
-            setProfilePhoto(data.profilePhoto || "");
-            setPreferredArea(data.preferredArea || "");
-            setCompletedWorks(data.completedWorks || []);
-            setPendingWorks(data.pendingWorks || []);
-            setCompletedWorkCount(data.completedWorkCount || 0);
-            setMedals(data.medals || []);
-            
-            calculateMedals(data.completedWorkCount || 0);
-          }
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setVolunteer(data);
+          setForm(data);
+          setSkills(data.skills || {});
+          setProfilePhoto(data.profilePhoto || "");
+          setPreferredArea(data.preferredArea || "");
+          setCompletedWorks(data.completedWorks || []);
+          setPendingWorks(data.pendingWorks || []);
+          setCompletedWorkCount(data.completedWorkCount || 0);
+          setMedals(data.medals || []);
+          
+          await fetchAcceptedFoodRequests(user.uid);
+
+          calculateMedals(data.completedWorkCount || 0);
         }
-      } catch (error) {
-        console.error("Error fetching volunteer:", error);
-      } finally {
-        setLoading(false);
       }
-    };
+    } catch (error) {
+      console.error("Error fetching volunteer:", error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
-    fetchVolunteer();
-    fetchAvailableWorks();
-  }, []);
+    // Update your useEffect to use the new function
+    useEffect(() => {
+      fetchVolunteerData();
+
+      // Listen for when screen comes into focus
+      const unsubscribe = navigation.addListener('focus', () => {
+        fetchVolunteerData();
+      });
+
+      // Cleanup the listener
+      return unsubscribe;
+  }, [navigation]);
+
+  // Add pull-to-refresh functionality
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchVolunteerData();
+  };
 
   //Medal calculation
   const calculateMedals = (count) => {
@@ -91,95 +122,160 @@ export default function VolunteerProfile() {
     }
   };
 
-  //Fetch available works
-  const fetchAvailableWorks = async () => {
+  //Fetch accepted works
+  const fetchAcceptedFoodRequests = async (volunteerId) => {
     try {
-      const worksSnapshot = await getDocs(collection(db, "Organizations"));
-      const works = [];
+      if (!volunteerId) return;
+
+      const worksSnapshot = await getDocs(collection(db, "foodRequests"));
+      
+      const acceptedWorks = [];
+      
       worksSnapshot.forEach((doc) => {
-        works.push({ id: doc.id, ...doc.data() });
+        const requestData = doc.data();
+        
+        // FIX: Check for string "true" instead of boolean true
+        if (requestData.foodRequest?.volunteerAccepted === "true") {
+          const foodItem = requestData.foodRequest?.items?.[0]?.item || "Food Item";
+          
+          // Convert timestamps to strings
+          const convertTimestampToString = (timestamp) => {
+            if (!timestamp) return "";
+            try {
+              let date;
+              if (timestamp.seconds && timestamp.nanoseconds) {
+                date = new Date(timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000);
+              } else if (timestamp.toDate) {
+                date = timestamp.toDate();
+              } else {
+                date = new Date(timestamp);
+              }
+              return date.toLocaleDateString();
+            } catch {
+              return "Invalid date";
+            }
+          };
+
+          const convertTimeToString = (timestamp) => {
+            if (!timestamp) return "";
+            try {
+              let date;
+              if (timestamp.seconds && timestamp.nanoseconds) {
+                date = new Date(timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000);
+              } else if (timestamp.toDate) {
+                date = timestamp.toDate();
+              } else {
+                date = new Date(timestamp);
+              }
+              return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            } catch {
+              return "Invalid time";
+            }
+          };
+
+          const acceptedWork = {
+            id: doc.id,
+            title: foodItem,
+            description: foodItem,
+            type: "food_request",
+            status: requestData.status || "Accepted",
+            pickedAt: requestData.acceptedAt || new Date().toISOString(),
+            volunteerId: volunteerId,
+            volunteerName: requestData.acceptedByVolunteer || "Volunteer",
+            foodItem: foodItem,
+            organization: requestData.organization || {},
+            availableDate: convertTimestampToString(requestData.foodRequest?.pickupDate),
+            availableTime: convertTimeToString(requestData.foodRequest?.pickupTime),
+            requiredBefore: convertTimestampToString(requestData.foodRequest?.requiredBefore),
+            priority: requestData.foodRequest?.priority || "Medium"
+          };
+          
+          acceptedWorks.push(acceptedWork);
+        }
       });
-      setAvailableWorks(works);
+      
+      setPendingWorks(acceptedWorks);
+      
     } catch (error) {
-      console.error("Error fetching available works:", error);
+      console.error("Error fetching accepted food requests:", error);
     }
   };
 
-  //Pick work functionality
-  const pickWork = async (work) => {
-    try {
-      const user = auth.currentUser;
-      if (user) {
-        const docRef = doc(db, "Volunteers", user.uid);
-        const updatedPendingWorks = [...pendingWorks, { ...work, pickedAt: new Date() }];
-        
-        await updateDoc(docRef, {
-          pendingWorks: updatedPendingWorks
-        });
-        
-        setPendingWorks(updatedPendingWorks);
-        await deleteDoc(doc(db, "Organizations", work.id));
-        
-        Toast.show({
-          type: 'success',
-          text1: 'Work Picked!',
-          text2: 'The work has been added to your pending tasks'
-        });
-        
-        fetchAvailableWorks();
-      }
-    } catch (error) {
-      console.error("Error picking work:", error);
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: 'Failed to pick work'
-      });
-    }
-  };
-
-  //Complete work functionality
-  const completeWork = async (workIndex) => {
-    try {
-      const user = auth.currentUser;
-      if (user) {
-        const updatedPendingWorks = pendingWorks.filter((_, index) => index !== workIndex);
-        const newCompletedCount = completedWorkCount + 1;
-        
-        await updateDoc(doc(db, "Volunteers", user.uid), {
-          pendingWorks: updatedPendingWorks,
-          completedWorkCount: newCompletedCount
-        });
-        
-        setPendingWorks(updatedPendingWorks);
-        setCompletedWorkCount(newCompletedCount);
-        calculateMedals(newCompletedCount);
-        
-        Toast.show({
-          type: 'success',
-          text1: 'Work Completed!',
-          text2: `Total completed works: ${newCompletedCount}`
-        });
-      }
-    } catch (error) {
-      console.error("Error completing work:", error);
-    }
-  };
-
+  //Show pending works
   const renderPendingWorks = () => {
     return (
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>⏳ My Pending Works ({pendingWorks.length})</Text>
         {pendingWorks.length === 0 ? (
-          <Text style={styles.noData}>No pending works.</Text>
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateIcon}>📭</Text>
+            <Text style={styles.emptyStateText}>No pending works</Text>
+            <Text style={styles.emptyStateSubtext}>
+              Click "Browse All Food Requests" to find available tasks
+            </Text>
+          </View>
         ) : (
           pendingWorks.map((work, index) => (
             <View key={index} style={styles.workCard}>
-              <Text style={styles.workTitle}>{work.title}</Text>
-              <Text style={styles.workDescription}>{work.description}</Text>
-              <Text style={styles.pickedDate}>
-                📅 Picked: {work.pickedAt ? new Date(work.pickedAt).toLocaleDateString() : 'Recently'}
-              </Text>
+              {/* Header with title and status */}
+              <View style={styles.cardHeader}>
+                <Text style={styles.workTitle}>{work.title || work.foodItem || "Food Request"}</Text>
+                <View style={[
+                  styles.statusBadge,
+                  work.priority === "High" && styles.highPriorityBadge,
+                  work.priority === "Urgent" && styles.urgentPriorityBadge
+                ]}>
+                  <Text style={styles.statusText}>
+                    {work.priority || "Medium"}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Organization */}
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>🏢 Organization:</Text>
+                <Text style={styles.detailValue}>
+                  {work.organization?.name || work.organization || "Unknown Organization"}
+                </Text>
+              </View>
+
+              {/* Food Item */}
+              {work.foodItem && (
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>🍲 Food Item:</Text>
+                  <Text style={styles.detailValue}>{work.foodItem}</Text>
+                </View>
+              )}
+
+              {/* Pickup Details */}
+              {work.availableDate && (
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>📅 Pickup:</Text>
+                  <Text style={styles.detailValue}>
+                    {work.availableDate} at {work.availableTime || "specified time"}
+                  </Text>
+                </View>
+              )}
+
+              {/* Required Before */}
+              {work.requiredBefore && (
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>⏰ Required Before:</Text>
+                  <Text style={styles.detailValue}>
+                    {work.requiredBefore}
+                  </Text>
+                </View>
+              )}
+
+              {/* Accepted Date */}
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>✅ Accepted:</Text>
+                <Text style={styles.detailValue}>
+                  {work.pickedAt ? new Date(work.pickedAt).toLocaleDateString() : 'Recently'}
+                </Text>
+              </View>
+
+              {/* Complete Button */}
               <TouchableOpacity 
                 style={styles.completeButton}
                 onPress={() => completeWork(index)}
@@ -193,41 +289,158 @@ export default function VolunteerProfile() {
     );
   };
 
-  const renderAchievements = () => {
-    return (
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>🏆 My Achievements</Text>
-        <View style={styles.achievementsContainer}>
-          <Text style={styles.achievementText}>
-            📊 Completed Works: <Text style={styles.count}>{completedWorkCount}</Text>
+  //Complete work functionality
+  const completeWork = async (workIndex) => {
+    try {
+      const user = auth.currentUser;
+      if (user && pendingWorks[workIndex]) {
+        const work = pendingWorks[workIndex];
+        
+        // 1. Update the food request
+        if (work.type === "food_request" && work.id) {
+          await updateDoc(doc(db, "foodRequests", work.id), {
+            VolunteerStatus: "Completed",
+            VolunteerCompletedAt: new Date().toISOString(),
+            VolunteerCompletedBy: user.uid,
+            completedByVolunteer: user.displayName || "Volunteer",
+            "foodRequest.volunteerAccepted": "false"
+          });
+        }
+        
+        // 2. Add to completed works WITHOUT photos array
+        const updatedCompletedWorks = [
+          ...completedWorks,
+          {
+            ...work,
+            completedAt: new Date().toISOString(),
+            status: "Completed",
+            completionPhotos: []
+            // NO completionPhotos field here - it will be added later when photos are uploaded
+          }
+        ];
+        
+        const newCompletedCount = completedWorkCount + 1;
+        
+        // 3. Update volunteer document
+        await updateDoc(doc(db, "Volunteers", user.uid), {
+          completedWorks: updatedCompletedWorks,
+          completedWorkCount: newCompletedCount
+        });
+        
+        // 4. Update local state
+        await fetchAcceptedFoodRequests(user.uid);
+        setCompletedWorks(updatedCompletedWorks);
+        setCompletedWorkCount(newCompletedCount);
+        calculateMedals(newCompletedCount);
+        
+        Toast.show({
+          type: 'success',
+          text1: 'Work Completed!',
+          text2: `Total completed works: ${newCompletedCount}`
+        });
+      }
+    } catch (error) {
+      console.error("Error completing work:", error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to mark work as completed'
+      });
+    }
+  };
+
+  const renderCompletedWorks = () => {
+  return (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>✅ Completed Works ({completedWorks.length})</Text>
+      
+      {completedWorks.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyStateIcon}>📷</Text>
+          <Text style={styles.emptyStateText}>No completed works yet</Text>
+          <Text style={styles.emptyStateSubtext}>
+            Complete some food requests to see them here
           </Text>
-          
-          <View style={styles.medalsContainer}>
-            <Text style={styles.medalsTitle}>Medals Earned:</Text>
-            <View style={styles.medalsList}>
-              {medals.includes('bronze') ? (
-                <Text style={styles.medal}>🥉 Bronze</Text>
-              ) : (
-                <Text style={styles.medalLocked}>🔒 Bronze (need 1+ works)</Text>
-              )}
+        </View>
+      ) : (
+        completedWorks.map((work, workIndex) => (
+          <View key={workIndex} style={styles.completedWorkCard}>
+            {/* Header */}
+            <View style={styles.cardHeader}>
+              <Text style={styles.workTitle}>{work.title || work.foodItem || "Food Request"}</Text>
+              <Text style={styles.completedDate}>
+                {work.completedAt ? new Date(work.completedAt).toLocaleDateString() : 'Recently'}
+              </Text>
+            </View>
+
+            {/* Organization */}
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>🏢 Organization:</Text>
+              <Text style={styles.detailValue}>
+                {work.organization?.name || work.organization || "Unknown Organization"}
+              </Text>
+            </View>
+
+            {/* Completion Photos Section */}
+            <View style={styles.photosSection}>
+              <Text style={styles.photosLabel}>
+                📸 Completion Photos ({work.completionPhotos?.length || 0}/3)
+              </Text>
               
-              {medals.includes('silver') ? (
-                <Text style={styles.medal}>🥈 Silver</Text>
+              {/* Display Photos with Delete Buttons */}
+              {work.completionPhotos && work.completionPhotos.length > 0 ? (
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.photosScrollView}
+                >
+                  <View style={styles.photosContainer}>
+                    {work.completionPhotos.map((photo, photoIndex) => (
+                      <View key={photoIndex} style={styles.photoContainer}>
+                        <Image 
+                          source={{ uri: photo }} 
+                          style={styles.photo}
+                          resizeMode="cover"
+                        />
+                        {/* Delete Button for this specific photo */}
+                        <TouchableOpacity 
+                          style={styles.deletePhotoButton}
+                          onPress={() => deleteCompletedWorkPhoto(workIndex, photoIndex)}
+                        >
+                          <Text style={styles.deletePhotoButtonText}>✕</Text>
+                        </TouchableOpacity>
+                        <Text style={styles.photoNumber}>#{photoIndex + 1}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </ScrollView>
               ) : (
-                <Text style={styles.medalLocked}>🔒 Silver (need 5+ works)</Text>
+                <Text style={styles.noPhotosText}>No photos added yet</Text>
               )}
-              
-              {medals.includes('gold') ? (
-                <Text style={styles.medal}>🥇 Gold</Text>
-              ) : (
-                <Text style={styles.medalLocked}>🔒 Gold (need 10+ works)</Text>
-              )}
+
+              {/* Add Photo Button */}
+              <TouchableOpacity 
+                style={[
+                  styles.addPhotoButton,
+                  (work.completionPhotos?.length || 0) >= 3 && styles.disabledButton
+                ]}
+                onPress={() => pickCompletedWorkPhoto(workIndex)}
+                disabled={(work.completionPhotos?.length || 0) >= 3}
+              >
+                <Text style={styles.addPhotoButtonText}>
+                  {(work.completionPhotos?.length || 0) >= 3 
+                    ? '📸 Maximum Photos Reached' 
+                    : `📸 Add Completion Photo (${work.completionPhotos?.length || 0}/3)`
+                  }
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
-        </View>
-      </View>
-    );
-  };
+        ))
+      )}
+    </View>
+  );
+};
 
   const pickImage = () => {
     launchImageLibrary(
@@ -352,7 +565,7 @@ export default function VolunteerProfile() {
     }
   };
 
-  const pickCompletedWork = () => {
+  const pickCompletedWorkPhoto = (workIndex) => {
     launchImageLibrary(
       { mediaType: 'photo', quality: 1, includeBase64: true },
       async (response) => {
@@ -370,13 +583,27 @@ export default function VolunteerProfile() {
             return;
           }
 
-          // Check maximum photos limit
-          const MAX_WORK_PHOTOS = 3;
-          if (completedWorks.length >= MAX_WORK_PHOTOS) {
+          // Check if work exists
+          if (!completedWorks[workIndex]) {
+            Toast.show({
+              type: 'error',
+              text1: 'Work Not Found',
+              text2: 'Completed work not found for photo upload.',
+              position: 'top'
+            });
+            return;
+          }
+
+          // Check maximum photos limit per work
+          const MAX_PHOTOS_PER_WORK = 3;
+          const currentWork = completedWorks[workIndex];
+          
+          const currentPhotos = currentWork.completionPhotos || [];
+          if (currentPhotos.length >= MAX_PHOTOS_PER_WORK) {
             Toast.show({
               type: 'error',
               text1: 'Maximum Photos Reached',
-              text2: `You can only upload up to ${MAX_WORK_PHOTOS} work photos.`,
+              text2: `You can only upload up to ${MAX_PHOTOS_PER_WORK} photos per work.`,
               position: 'top'
             });
             return;
@@ -384,42 +611,43 @@ export default function VolunteerProfile() {
 
           setUploading(true);
           
-          // FIX: Determine the correct MIME type
+          // Determine MIME type
           let mimeType = file.type;
           if (!mimeType || mimeType === 'undefined') {
-            // Fallback to common image MIME types based on file extension or default to jpeg
             if (file.fileName) {
               if (file.fileName.toLowerCase().endsWith('.png')) {
                 mimeType = 'image/png';
               } else if (file.fileName.toLowerCase().endsWith('.gif')) {
                 mimeType = 'image/gif';
               } else {
-                mimeType = 'image/jpeg'; // Default to jpeg
+                mimeType = 'image/jpeg';
               }
             } else {
-              mimeType = 'image/jpeg'; // Final fallback
+              mimeType = 'image/jpeg';
             }
           }
           
-          console.log("Detected MIME type:", mimeType);
-          
-          // Convert to Base64 string with correct MIME type
+          // Convert to Base64 string
           const base64Image = `data:${mimeType};base64,${file.base64}`;
-          const updatedWorks = [...completedWorks, base64Image];
           
-          console.log("Adding new work photo. New array length:", updatedWorks.length);
+          // Add photo to specific work
+          const updatedCompletedWorks = [...completedWorks];
+          if (!updatedCompletedWorks[workIndex].completionPhotos) {
+            updatedCompletedWorks[workIndex].completionPhotos = [];
+          }
+          updatedCompletedWorks[workIndex].completionPhotos.push(base64Image);
           
           try {
             const user = auth.currentUser;
             if (user) {
               await updateDoc(doc(db, "Volunteers", user.uid), { 
-                completedWorks: updatedWorks 
+                completedWorks: updatedCompletedWorks 
               });
-              setCompletedWorks(updatedWorks);
+              setCompletedWorks(updatedCompletedWorks);
               Toast.show({ 
                 type: 'success', 
                 text1: 'Work photo added!',
-                text2: `${updatedWorks.length}/${MAX_WORK_PHOTOS} photos`
+                text2: `Photo ${updatedCompletedWorks[workIndex].completionPhotos.length}/${MAX_PHOTOS_PER_WORK}`
               });
             }
           } catch (error) {
@@ -436,34 +664,61 @@ export default function VolunteerProfile() {
     );
   };
 
-  const deleteCompletedWork = async (index) => {
-    console.log("Delete clicked for index:", index);
-    
+  const deleteCompletedWorkPhoto = async (workIndex, photoIndex) => {
     try {
-      // Create a new array without the deleted item
-      const newWorks = [...completedWorks];
-      newWorks.splice(index, 1); // Remove 1 item at index
-      
-      console.log("New array length:", newWorks.length);
-      
       const user = auth.currentUser;
-      if (user) {
-        // Update Firestore
-        await updateDoc(doc(db, "Volunteers", user.uid), {
-          completedWorks: newWorks
-        });
-        
-        // Update local state
-        setCompletedWorks(newWorks);
-        
+      if (!user) {
         Toast.show({
-          type: 'success',
-          text1: 'Photo deleted!',
-          text2: `${newWorks.length} photos remaining`
+          type: 'error',
+          text1: 'Error',
+          text2: 'User not authenticated'
         });
+        return;
       }
+
+      // Create a copy of completedWorks array
+      const updatedCompletedWorks = [...completedWorks];
+      
+      // Check if work exists
+      if (!updatedCompletedWorks[workIndex]) {
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: 'Work not found'
+        });
+        return;
+      }
+
+      // Check if photo exists
+      if (!updatedCompletedWorks[workIndex].completionPhotos || 
+          !updatedCompletedWorks[workIndex].completionPhotos[photoIndex]) {
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: 'Photo not found'
+        });
+        return;
+      }
+
+      // Remove the specific photo from the work's completionPhotos array
+      updatedCompletedWorks[workIndex].completionPhotos.splice(photoIndex, 1);
+
+      // Update Firestore
+      await updateDoc(doc(db, "Volunteers", user.uid), {
+        completedWorks: updatedCompletedWorks
+      });
+      
+      // Update local state
+      setCompletedWorks(updatedCompletedWorks);
+      
+      Toast.show({
+        type: 'success',
+        text1: 'Photo deleted!',
+        text2: `Photo removed from ${updatedCompletedWorks[workIndex].title}`
+      });
+      
     } catch (error) {
-      console.error("Delete error:", error);
+      console.error("Delete photo error:", error);
       Toast.show({
         type: 'error',
         text1: 'Delete failed',
@@ -475,447 +730,415 @@ export default function VolunteerProfile() {
   if (loading) return <Text style={styles.loadingText}>Loading...</Text>;
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      {/* ---------------- Password Change Mode ---------------- */}
-      {showPasswordForm ? (
-        <View style={styles.passwordFormContainer}>
-          <View style={styles.passwordFormHeader}>
-            <Icon name="lock" size={24} color="#3498db" />
-            <Text style={styles.passwordFormTitle}>Change Password</Text>
-            <Text style={styles.passwordFormSubtitle}>Update your password to keep your account secure</Text>
+    <LinearGradient
+      colors={['#87b34eff', '#F5F5DC', '#87b34eff']}  
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.gradientBackground}>
+      <ScrollView contentContainerStyle={styles.container} refreshControl={
+      <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
+        {/* ---------------- Password Change Mode ---------------- */}
+        {showPasswordForm ? (
+          <View style={styles.passwordFormContainer}>
+            <View style={styles.passwordFormHeader}>
+              <Icon name="lock" size={24} color="#3498db" />
+              <Text style={styles.passwordFormTitle}>Change Password</Text>
+              <Text style={styles.passwordFormSubtitle}>Update your password to keep your account secure</Text>
+            </View>
+
+            <View style={styles.passwordInputContainer}>
+              <View style={styles.inputWrapper}>
+                <Icon name="vpn-key" size={20} color="#7f8c8d" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="Current Password"
+                  placeholderTextColor="#95a5a6"
+                  secureTextEntry
+                  value={currentPassword}
+                  onChangeText={setCurrentPassword}
+                />
+              </View>
+
+              <View style={styles.inputWrapper}>
+                <Icon name="lock-outline" size={20} color="#7f8c8d" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="New Password"
+                  placeholderTextColor="#95a5a6"
+                  secureTextEntry
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                />
+              </View>
+
+              <View style={styles.inputWrapper}>
+                <Icon name="lock" size={20} color="#7f8c8d" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="Confirm New Password"
+                  placeholderTextColor="#95a5a6"
+                  secureTextEntry
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                />
+              </View>
+            </View>
+
+            <View>
+              <TouchableOpacity 
+                style={[styles.updatePasswordButtonContainer]} 
+                onPress={handleDirectPasswordUpdate}
+              >
+                <Icon name="check" size={20} color="#fff" style={styles.updatePasswordIcon} />
+                <Text style={styles.updatePasswordText}>Change Password</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.cancelPasswordButtonContainer]} 
+                onPress={() => {
+                  setShowPasswordForm(false);
+                  setNewPassword("");
+                  setConfirmPassword("");
+                }}
+              >
+                <Icon name="close" size={20} color="#fff" style={styles.cancelPasswordIcon} />
+                <Text style={styles.cancelPasswordText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.passwordRequirements}>
+              <Text style={styles.requirementsTitle}>Password Requirements:</Text>
+              <View style={styles.requirementItem}>
+                <Icon name={newPassword.length >= 6 ? "check-circle" : "radio-button-unchecked"} 
+                      size={16} 
+                      color={newPassword.length >= 6 ? "#27ae60" : "#bdc3c7"} />
+                <Text style={styles.requirementText}>At least 6 characters</Text>
+              </View>
+              <View style={styles.requirementItem}>
+                <Icon name={newPassword === confirmPassword && newPassword ? "check-circle" : "radio-button-unchecked"} 
+                      size={16} 
+                      color={newPassword === confirmPassword && newPassword ? "#27ae60" : "#bdc3c7"} />
+                <Text style={styles.requirementText}>Passwords must match</Text>
+              </View>
+            </View>
           </View>
+        ) : (
+          <>
+            {/* ---------------- Profile / Edit Mode ---------------- */}
 
-          <View style={styles.passwordInputContainer}>
-            <View style={styles.inputWrapper}>
-              <Icon name="vpn-key" size={20} color="#7f8c8d" style={styles.inputIcon} />
-              <TextInput
-                style={styles.passwordInput}
-                placeholder="Current Password"
-                placeholderTextColor="#95a5a6"
-                secureTextEntry
-                value={currentPassword}
-                onChangeText={setCurrentPassword}
-              />
-            </View>
-
-            <View style={styles.inputWrapper}>
-              <Icon name="lock-outline" size={20} color="#7f8c8d" style={styles.inputIcon} />
-              <TextInput
-                style={styles.passwordInput}
-                placeholder="New Password"
-                placeholderTextColor="#95a5a6"
-                secureTextEntry
-                value={newPassword}
-                onChangeText={setNewPassword}
-              />
-            </View>
-
-            <View style={styles.inputWrapper}>
-              <Icon name="lock" size={20} color="#7f8c8d" style={styles.inputIcon} />
-              <TextInput
-                style={styles.passwordInput}
-                placeholder="Confirm New Password"
-                placeholderTextColor="#95a5a6"
-                secureTextEntry
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-              />
-            </View>
-          </View>
-
-          <View style={styles.passwordButtonContainer}>
-            <TouchableOpacity 
-              style={[styles.passwordButton, styles.updateButton]} 
-              onPress={handleDirectPasswordUpdate}
-            >
-              <Icon name="check" size={20} color="#fff" style={styles.buttonIcon} />
-              <Text style={styles.passwordButtonText}>Update Password</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={[styles.passwordButton, styles.cancelButton]} 
-              onPress={() => {
-                setShowPasswordForm(false);
-                setNewPassword("");
-                setConfirmPassword("");
-              }}
-            >
-              <Icon name="close" size={20} color="#fff" style={styles.buttonIcon} />
-              <Text style={styles.passwordButtonText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.passwordRequirements}>
-            <Text style={styles.requirementsTitle}>Password Requirements:</Text>
-            <View style={styles.requirementItem}>
-              <Icon name={newPassword.length >= 6 ? "check-circle" : "radio-button-unchecked"} 
-                    size={16} 
-                    color={newPassword.length >= 6 ? "#27ae60" : "#bdc3c7"} />
-              <Text style={styles.requirementText}>At least 6 characters</Text>
-            </View>
-            <View style={styles.requirementItem}>
-              <Icon name={newPassword === confirmPassword && newPassword ? "check-circle" : "radio-button-unchecked"} 
-                    size={16} 
-                    color={newPassword === confirmPassword && newPassword ? "#27ae60" : "#bdc3c7"} />
-              <Text style={styles.requirementText}>Passwords must match</Text>
-            </View>
-          </View>
-        </View>
-      ) : (
-        <>
-          {/* ---------------- Profile / Edit Mode ---------------- */}
-
-          {isEditing ? (
-            <ScrollView style={styles.editFormContainer} showsVerticalScrollIndicator={false}>
-              {/* Profile Photo Upload */}
-              <View style={styles.editSection}>
-                <View style={styles.sectionHeader}>
-                  <Icon name="photo-camera" size={22} color="#3498db" />
-                  <Text style={styles.sectionTitle}>Profile Photo</Text>
-                </View>
-                <View style={styles.uploadCard}>
-                  <View style={styles.uploadContent}>
-                    {profilePhoto ? (
-                      <View style={styles.imagePreviewContainer}>
-                        <Image source={{ uri: profilePhoto }} style={styles.imagePreview} />
-                        <TouchableOpacity style={styles.replaceButton} onPress={pickImage}>
-                          <Icon name="edit" size={16} color="#fff" />
-                        </TouchableOpacity>
-                      </View>
-                    ) : (
-                      <View style={styles.uploadPlaceholder}>
-                        <Icon name="cloud-upload" size={40} color="#bdc3c7" />
-                        <Text style={styles.uploadPlaceholderText}>Upload Profile Photo</Text>
-                        <Text style={styles.uploadSubtext}>Recommended: 500x500px</Text>
-                      </View>
-                    )}
+            {isEditing ? (
+              <ScrollView style={styles.editFormContainer} showsVerticalScrollIndicator={false}>
+                {/* Profile Photo Upload */}
+                <View style={styles.editSection}>
+                  <View style={styles.sectionHeader}>
+                    <Icon name="photo-camera" size={22} color="#3498db" />
+                    <Text style={styles.sectionTitle}>Profile Photo</Text>
                   </View>
-                  <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
-                    <Icon name="photo-library" size={18} color="#fff" style={styles.buttonIcon} />
-                    <Text style={styles.uploadButtonText}>
-                      {profilePhoto ? 'Change Photo' : 'Select Photo'}
-                    </Text>
+                  <View style={styles.uploadCard}>
+                    <View style={styles.uploadContent}>
+                      {profilePhoto ? (
+                        <View style={styles.imagePreviewContainer}>
+                          <Image source={{ uri: profilePhoto }} style={styles.imagePreview} />
+                          <TouchableOpacity style={styles.replaceButton} onPress={pickImage}>
+                            <Icon name="edit" size={16} color="#fff" />
+                          </TouchableOpacity>
+                        </View>
+                      ) : (
+                        <View style={styles.uploadPlaceholder}>
+                          <Icon name="cloud-upload" size={40} color="#bdc3c7" />
+                          <Text style={styles.uploadPlaceholderText}>Upload Profile Photo</Text>
+                          <Text style={styles.uploadSubtext}>Recommended: 500x500px</Text>
+                        </View>
+                      )}
+                    </View>
+                    <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
+                      <Icon name="photo-library" size={18} color="#fff" style={styles.buttonIcon} />
+                      <Text style={styles.uploadButtonText}>
+                        {profilePhoto ? 'Change Photo' : 'Select Photo'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Personal Information */}
+                <View style={styles.editSection}>
+                  <View style={styles.sectionHeader}>
+                    <Icon name="person" size={22} color="#3498db" />
+                    <Text style={styles.sectionTitle}>Personal Information</Text>
+                  </View>
+                  
+                  <View style={styles.inputGroup}>
+                    <View style={styles.inputWrapper}>
+                      <Icon name="badge" size={20} color="#7f8c8d" style={styles.inputIcon} />
+                      <TextInput
+                        style={styles.formInput}
+                        value={form.name}
+                        onChangeText={(t) => setForm({ ...form, name: t })}
+                        placeholder="Full Name"
+                        placeholderTextColor="#95a5a6"
+                      />
+                    </View>
+
+                    <View style={styles.inputWrapper}>
+                      <Icon name="phone" size={20} color="#7f8c8d" style={styles.inputIcon} />
+                      <TextInput
+                        style={styles.formInput}
+                        value={form.phone}
+                        onChangeText={(t) => setForm({ ...form, phone: t })}
+                        placeholder="Phone Number"
+                        placeholderTextColor="#95a5a6"
+                        keyboardType="phone-pad"
+                      />
+                    </View>
+
+                    <View style={styles.inputWrapper}>
+                      <Icon name="home" size={20} color="#7f8c8d" style={styles.inputIcon} />
+                      <TextInput
+                        style={styles.formInput}
+                        value={form.address}
+                        onChangeText={(t) => setForm({ ...form, address: t })}
+                        placeholder="Address"
+                        placeholderTextColor="#95a5a6"
+                        multiline
+                      />
+                    </View>
+                  </View>
+                </View>
+
+                {/* Volunteering Preferences */}
+                <View style={styles.editSection}>
+                  <View style={styles.sectionHeader}>
+                    <Icon name="place" size={22} color="#3498db" />
+                    <Text style={styles.sectionTitle}>Volunteering Preferences</Text>
+                  </View>
+                  
+                  <View style={styles.inputWrapper}>
+                    <Icon name="location-on" size={20} color="#7f8c8d" style={styles.inputIcon} />
+                    <TextInput
+                      style={styles.formInput}
+                      placeholder="e.g., City Center, Food Bank, Community Kitchen"
+                      value={preferredArea}
+                      onChangeText={setPreferredArea}
+                      placeholderTextColor="#95a5a6"
+                    />
+                  </View>
+                </View>
+
+                {/* Skills */}
+                <View style={styles.editSection}>
+                  <View style={styles.sectionHeader}>
+                    <Icon name="build" size={22} color="#3498db" />
+                    <Text style={styles.sectionTitle}>Skills & Abilities</Text>
+                  </View>
+                  
+                  <Text style={styles.skillsDescription}>Select the skills you can contribute:</Text>
+                  
+                  <View style={styles.skillsGrid}>
+                    <View style={styles.skillRow}>
+                      <TouchableOpacity 
+                        style={[styles.skillButton, skills.cooking && styles.skillButtonActive]} 
+                        onPress={() => toggleSkill('cooking')}
+                      >
+                        <Icon name="restaurant" size={20} color={skills.cooking ? "#fff" : "#7f8c8d"} />
+                        <Text style={[styles.skillText, skills.cooking && styles.skillTextActive]}>
+                          Cooking
+                        </Text>
+                      </TouchableOpacity>
+                      
+                      <TouchableOpacity 
+                        style={[styles.skillButton, skills.delivery && styles.skillButtonActive]} 
+                        onPress={() => toggleSkill('delivery')}
+                      >
+                        <Icon name="local-shipping" size={20} color={skills.delivery ? "#fff" : "#7f8c8d"} />
+                        <Text style={[styles.skillText, skills.delivery && styles.skillTextActive]}>
+                          Delivery
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                    
+                    <View style={styles.skillRow}>
+                      <TouchableOpacity 
+                        style={[styles.skillButton, skills.packing && styles.skillButtonActive]} 
+                        onPress={() => toggleSkill('packing')}
+                      >
+                        <Icon name="inventory" size={20} color={skills.packing ? "#fff" : "#7f8c8d"} />
+                        <Text style={[styles.skillText, skills.packing && styles.skillTextActive]}>
+                          Packing
+                        </Text>
+                      </TouchableOpacity>
+                      
+                      <TouchableOpacity 
+                        style={[styles.skillButton, skills.driving && styles.skillButtonActive]} 
+                        onPress={() => toggleSkill('driving')}
+                      >
+                        <Icon name="directions-car" size={20} color={skills.driving ? "#fff" : "#7f8c8d"} />
+                        <Text style={[styles.skillText, skills.driving && styles.skillTextActive]}>
+                          Driving
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Action Buttons */}
+                <View style={styles.actionButtons}>
+                  <TouchableOpacity style={[styles.actionButton, styles.saveButton]} onPress={handleUpdate}>
+                    <Icon name="check" size={20} color="#fff" style={styles.buttonIcon} />
+                    <Text style={styles.actionButtonText}>Save Changes</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity style={[styles.actionButton, styles.cancelButton]} onPress={() => setIsEditing(false)}>
+                    <Icon name="close" size={20} color="#fff" style={styles.buttonIcon} />
+                    <Text style={styles.actionButtonText}>Cancel</Text>
                   </TouchableOpacity>
                 </View>
-              </View>
-
-              {/* Personal Information */}
-              <View style={styles.editSection}>
-                <View style={styles.sectionHeader}>
-                  <Icon name="person" size={22} color="#3498db" />
-                  <Text style={styles.sectionTitle}>Personal Information</Text>
-                </View>
-                
-                <View style={styles.inputGroup}>
-                  <View style={styles.inputWrapper}>
-                    <Icon name="badge" size={20} color="#7f8c8d" style={styles.inputIcon} />
-                    <TextInput
-                      style={styles.formInput}
-                      value={form.name}
-                      onChangeText={(t) => setForm({ ...form, name: t })}
-                      placeholder="Full Name"
-                      placeholderTextColor="#95a5a6"
-                    />
-                  </View>
-
-                  <View style={styles.inputWrapper}>
-                    <Icon name="phone" size={20} color="#7f8c8d" style={styles.inputIcon} />
-                    <TextInput
-                      style={styles.formInput}
-                      value={form.phone}
-                      onChangeText={(t) => setForm({ ...form, phone: t })}
-                      placeholder="Phone Number"
-                      placeholderTextColor="#95a5a6"
-                      keyboardType="phone-pad"
-                    />
-                  </View>
-
-                  <View style={styles.inputWrapper}>
-                    <Icon name="home" size={20} color="#7f8c8d" style={styles.inputIcon} />
-                    <TextInput
-                      style={styles.formInput}
-                      value={form.address}
-                      onChangeText={(t) => setForm({ ...form, address: t })}
-                      placeholder="Address"
-                      placeholderTextColor="#95a5a6"
-                      multiline
-                    />
-                  </View>
-                </View>
-              </View>
-
-              {/* Volunteering Preferences */}
-              <View style={styles.editSection}>
-                <View style={styles.sectionHeader}>
-                  <Icon name="place" size={22} color="#3498db" />
-                  <Text style={styles.sectionTitle}>Volunteering Preferences</Text>
-                </View>
-                
-                <View style={styles.inputWrapper}>
-                  <Icon name="location-on" size={20} color="#7f8c8d" style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.formInput}
-                    placeholder="e.g., City Center, Food Bank, Community Kitchen"
-                    value={preferredArea}
-                    onChangeText={setPreferredArea}
-                    placeholderTextColor="#95a5a6"
-                  />
-                </View>
-              </View>
-
-              {/* Skills */}
-              <View style={styles.editSection}>
-                <View style={styles.sectionHeader}>
-                  <Icon name="build" size={22} color="#3498db" />
-                  <Text style={styles.sectionTitle}>Skills & Abilities</Text>
-                </View>
-                
-                <Text style={styles.skillsDescription}>Select the skills you can contribute:</Text>
-                
-                <View style={styles.skillsGrid}>
-                  <View style={styles.skillRow}>
-                    <TouchableOpacity 
-                      style={[styles.skillButton, skills.cooking && styles.skillButtonActive]} 
-                      onPress={() => toggleSkill('cooking')}
-                    >
-                      <Icon name="restaurant" size={20} color={skills.cooking ? "#fff" : "#7f8c8d"} />
-                      <Text style={[styles.skillText, skills.cooking && styles.skillTextActive]}>
-                        Cooking
-                      </Text>
-                    </TouchableOpacity>
-                    
-                    <TouchableOpacity 
-                      style={[styles.skillButton, skills.delivery && styles.skillButtonActive]} 
-                      onPress={() => toggleSkill('delivery')}
-                    >
-                      <Icon name="local-shipping" size={20} color={skills.delivery ? "#fff" : "#7f8c8d"} />
-                      <Text style={[styles.skillText, skills.delivery && styles.skillTextActive]}>
-                        Delivery
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                  
-                  <View style={styles.skillRow}>
-                    <TouchableOpacity 
-                      style={[styles.skillButton, skills.packing && styles.skillButtonActive]} 
-                      onPress={() => toggleSkill('packing')}
-                    >
-                      <Icon name="inventory" size={20} color={skills.packing ? "#fff" : "#7f8c8d"} />
-                      <Text style={[styles.skillText, skills.packing && styles.skillTextActive]}>
-                        Packing
-                      </Text>
-                    </TouchableOpacity>
-                    
-                    <TouchableOpacity 
-                      style={[styles.skillButton, skills.driving && styles.skillButtonActive]} 
-                      onPress={() => toggleSkill('driving')}
-                    >
-                      <Icon name="directions-car" size={20} color={skills.driving ? "#fff" : "#7f8c8d"} />
-                      <Text style={[styles.skillText, skills.driving && styles.skillTextActive]}>
-                        Driving
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
-
-              {/* Action Buttons */}
-              <View style={styles.actionButtons}>
-                <TouchableOpacity style={[styles.actionButton, styles.saveButton]} onPress={handleUpdate}>
-                  <Icon name="check" size={20} color="#fff" style={styles.buttonIcon} />
-                  <Text style={styles.actionButtonText}>Save Changes</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity style={[styles.actionButton, styles.cancelButton]} onPress={() => setIsEditing(false)}>
-                  <Icon name="close" size={20} color="#fff" style={styles.buttonIcon} />
-                  <Text style={styles.actionButtonText}>Cancel</Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-          ) : (
-            <>
-              {/* View Mode */}
-              {volunteer?.profilePhoto && (
-                <Image source={{ uri: volunteer.profilePhoto }} style={styles.profileImage} />
-              )}
-              
-              <Text style={styles.name}>{volunteer?.name}</Text>
-              <Text style={styles.email}>{volunteer?.email}</Text>
-
-              <View style={styles.detailsContainer}>
-                <Text style={styles.detail}>
-                  <Text style={styles.label}>Phone:</Text> {volunteer?.phone || 'Not provided'}
-                </Text>
-                <Text style={styles.detail}>
-                  <Text style={styles.label}>Address:</Text> {volunteer?.address || 'Not provided'}
-                </Text>
-                <Text style={styles.detail}>
-                  <Text style={styles.label}>Preferred Area:</Text> {volunteer?.preferredArea || 'Not specified'}
-                </Text>
-
-                <Text style={[styles.label, {marginTop: 10}]}>Skills:</Text>
-                <View style={styles.skillsContainer}>
-                  {Object.entries(volunteer?.skills || {}).map(([skill, value]) =>
-                    value ? <Text key={skill} style={styles.skill}>{skill}</Text> : null
-                  )}
-                  {!volunteer?.skills || Object.values(volunteer.skills).filter(Boolean).length === 0 ? (
-                    <Text style={[styles.detail, {color: '#bdc3c7'}]}>No skills selected</Text>
-                  ) : null}
-                </View>
-
-                <View style={styles.availabilityRow}>
-                  <Icon 
-                    name={volunteer?.availability === "Available" ? "check-circle" : "cancel"} 
-                    size={20} 
-                    color={volunteer?.availability === "Available" ? "#27ae60" : "#e74c3c"} 
-                  />
-                  <Text style={styles.availabilityText}>
-                    {volunteer?.availability === "Available" ? "Currently Available" : "Currently Unavailable"}
-                  </Text>
-                  <Switch
-                    value={volunteer?.availability === "Available"}
-                    onValueChange={toggleAvailability}
-                    style={{ marginLeft: 'auto' }}
-                    trackColor={{ false: '#bdc3c7', true: '#27ae60' }}
-                    thumbColor={volunteer?.availability === "Available" ? '#ffffff' : '#ffffff'}
-                  />
-                </View>
-              </View>
-
-              {/* Available Works Section */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Available Works</Text>
-                <TouchableOpacity 
-                  style={styles.selectButton} 
-                  onPress={() => navigation.navigate('organizations')}
-                >
-                  <Icon name="work" size={20} color="#fff" style={styles.buttonIcon} />
-                  <Text style={styles.buttonText}>Browse Available Works</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Pending Works Section */}
-              {renderPendingWorks()}
-
-              {/*Achivements Section*/}
-              {renderAchievements()}
-
-              {/* Medals Section */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Your Medals</Text>
-                <Text style={styles.workCount}>Completed Works: {completedWorkCount}</Text>
-                
-                <View style={styles.medalsContainer}>
-                  {medals.includes("bronze") && (
-                    <View style={styles.medal}>
-                      <Icon name="emoji-events" size={30} color="#cd7f32" />
-                      <Text style={styles.medalText}>Bronze</Text>
-                      <Text style={styles.medalSubtext}>1+ works</Text>
-                    </View>
-                  )}
-                  
-                  {medals.includes("silver") && (
-                    <View style={styles.medal}>
-                      <Icon name="emoji-events" size={30} color="#c0c0c0" />
-                      <Text style={styles.medalText}>Silver</Text>
-                      <Text style={styles.medalSubtext}>5+ works</Text>
-                    </View>
-                  )}
-                  
-                  {medals.includes("gold") && (
-                    <View style={styles.medal}>
-                      <Icon name="emoji-events" size={30} color="#ffd700" />
-                      <Text style={styles.medalText}>Gold</Text>
-                      <Text style={styles.medalSubtext}>10+ works</Text>
-                    </View>
-                  )}
-                  
-                  {medals.length === 0 && (
-                    <Text style={styles.emptyText}>Complete works to earn medals!</Text>
-                  )}
-                </View>
-              </View>
-
-              {/* Completed Works Section */}
-              <View style={styles.completedWorksSection}>
-                <Text style={styles.sectionTitle}>Completed Work Photos ({completedWorks.length})</Text>
-                
-                <TouchableOpacity 
-                  style={[styles.selectButton, uploading && styles.disabledButton]} 
-                  onPress={pickCompletedWork}
-                  disabled={uploading}
-                >
-                  <Icon name="add-a-photo" size={20} color="#fff" style={styles.buttonIcon} />
-                  <Text style={styles.buttonText}>
-                    {uploading ? 'Uploading...' : 'Add Work Photo'}
-                  </Text>
-                </TouchableOpacity>
-                
-                {completedWorks.length === 0 ? (
-                  <View style={styles.emptyStateContainer}>
-                    <Icon name="photo-library" size={60} color="#ddd" style={styles.emptyStateIcon} />
-                    <Text style={styles.emptyStateText}>No work photos uploaded yet</Text>
-                    <Text style={styles.emptyStateSubtext}>Click "Add Work Photo" above to get started</Text>
-                  </View>
-                ) : (
-                  <View style={styles.completedWorksContainer}>
-                    {completedWorks.map((base64Image, idx) => (
-                      <View key={idx} style={styles.imageContainer}>
-                        <Image 
-                          source={{ uri: base64Image }}
-                          style={styles.completedWorkImage} 
-                        />
-                        <TouchableOpacity 
-                          style={styles.deleteImageButton} 
-                          onPress={() => deleteCompletedWork(idx)}
-                        >
-                          <Icon name="delete" size={18} color="#fff" />
-                        </TouchableOpacity>
-                        <Text style={styles.imageIndex}>#{idx + 1}</Text>
-                      </View>
-                    ))}
-                  </View>
+              </ScrollView>
+            ) : (
+              <>
+                {/* View Mode */}
+                {volunteer?.profilePhoto && (
+                  <Image source={{ uri: volunteer.profilePhoto }} style={styles.profileImage} />
                 )}
-              </View>
-
-              {/* Action Buttons */}
-              <View style={styles.buttonContainer}>
-                <TouchableOpacity style={[styles.button, styles.updateButton]} onPress={() => setIsEditing(true)}>
-                  <Icon name="edit" size={20} color="#fff" style={styles.buttonIcon} />
-                  <Text style={styles.buttonText}>Update Profile</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity 
-                  style={[styles.button, styles.passwordButton]} 
-                  onPress={() => setShowPasswordForm(true)}
-                >
-                  <Icon name="lock" size={20} color="#fff" style={styles.buttonIcon} />
-                  <Text style={styles.buttonText}>Change Password</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={[styles.button, styles.deleteButton]} onPress={handleDelete}>
-                  <Icon name="delete-outline" size={20} color="#fff" style={styles.buttonIcon} />
-                  <Text style={styles.buttonText}>Delete Profile</Text>
-                </TouchableOpacity>
                 
-                <TouchableOpacity style={[styles.button, styles.logoutButton]} onPress={handleLogout}>
-                  <Icon name="exit-to-app" size={20} color="#fff" style={styles.buttonIcon} />
-                  <Text style={styles.buttonText}>Log Out</Text>
-                </TouchableOpacity>
-              </View>
-            </>
-          )}
-        </>
-      )}
-    </ScrollView>
+                <Text style={styles.name}>{volunteer?.name}</Text>
+                <Text style={styles.email}>{volunteer?.email}</Text>
+
+                <View style={styles.detailsContainer}>
+                  <Text style={styles.detail}>
+                    <Text style={styles.label}>Phone:</Text> {volunteer?.phone || 'Not provided'}
+                  </Text>
+                  <Text style={styles.detail}>
+                    <Text style={styles.label}>Address:</Text> {volunteer?.address || 'Not provided'}
+                  </Text>
+                  <Text style={styles.detail}>
+                    <Text style={styles.label}>Preferred Area:</Text> {volunteer?.preferredArea || 'Not specified'}
+                  </Text>
+
+                  <Text style={[styles.label, {marginTop: 10}]}>Skills:</Text>
+                  <View style={styles.skillsContainer}>
+                    {Object.entries(volunteer?.skills || {}).map(([skill, value]) =>
+                      value ? <Text key={skill} style={styles.skill}>{skill}</Text> : null
+                    )}
+                    {!volunteer?.skills || Object.values(volunteer.skills).filter(Boolean).length === 0 ? (
+                      <Text style={[styles.detail, {color: '#bdc3c7'}]}>No skills selected</Text>
+                    ) : null}
+                  </View>
+
+                  <View style={styles.availabilityRow}>
+                    <Icon 
+                      name={volunteer?.availability === "Available" ? "check-circle" : "cancel"} 
+                      size={20} 
+                      color={volunteer?.availability === "Available" ? "#27ae60" : "#e74c3c"} 
+                    />
+                    <Text style={styles.availabilityText}>
+                      {volunteer?.availability === "Available" ? "Currently Available" : "Currently Unavailable"}
+                    </Text>
+                    <Switch
+                      value={volunteer?.availability === "Available"}
+                      onValueChange={toggleAvailability}
+                      style={{ marginLeft: 'auto' }}
+                      trackColor={{ false: '#bdc3c7', true: '#27ae60' }}
+                      thumbColor={volunteer?.availability === "Available" ? '#ffffff' : '#ffffff'}
+                    />
+                  </View>
+                </View>
+
+                {/* Available Works Section */}
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Find New Tasks</Text>
+                  <TouchableOpacity 
+                    style={styles.navigateButton}
+                    onPress={() => navigation.navigate('foodRequestListScreen')}
+                  >
+                    <Text style={styles.navigateButtonText}>📋 Browse All Food Requests</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Pending Works Section */}
+                {renderPendingWorks()}
+
+                {/* Medals Section */}
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>🏆 My Medals</Text>
+                  <Text style={styles.workCount}>📊 Completed Works: {completedWorkCount}</Text>
+                  
+                  <View style={styles.medalsContainer}>
+                    {medals.includes("bronze") && (
+                      <View style={styles.medal}>
+                        <Icon name="emoji-events" size={30} color="#cd7f32" />
+                        <Text style={styles.medalText}>Bronze</Text>
+                        <Text style={styles.medalSubtext}>1+ works</Text>
+                      </View>
+                    )}
+                    
+                    {medals.includes("silver") && (
+                      <View style={styles.medal}>
+                        <Icon name="emoji-events" size={30} color="#c0c0c0" />
+                        <Text style={styles.medalText}>Silver</Text>
+                        <Text style={styles.medalSubtext}>5+ works</Text>
+                      </View>
+                    )}
+                    
+                    {medals.includes("gold") && (
+                      <View style={styles.medal}>
+                        <Icon name="emoji-events" size={30} color="#ffd700" />
+                        <Text style={styles.medalText}>Gold</Text>
+                        <Text style={styles.medalSubtext}>10+ works</Text>
+                      </View>
+                    )}
+                    
+                    {medals.length === 0 && (
+                      <Text style={styles.emptyText}>Complete works to earn medals!</Text>
+                    )}
+                  </View>
+                </View>
+
+                {/* Completed Works Section */}
+                {renderCompletedWorks()}
+
+                {/* Action Buttons */}
+                <View style={styles.buttonContainer}>
+                  <TouchableOpacity style={[styles.button, styles.updateButton]} onPress={() => setIsEditing(true)}>
+                    <Icon name="edit" size={20} color="#fff" style={styles.buttonIcon} />
+                    <Text style={styles.buttonText}>Update Profile</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
+                    style={[styles.button, styles.passwordButton]} 
+                    onPress={() => setShowPasswordForm(true)}
+                  >
+                    <Icon name="lock" size={20} color="#fff" style={styles.buttonIcon} />
+                    <Text style={styles.buttonText}>Change Password</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={[styles.button, styles.deleteButton]} onPress={handleDelete}>
+                    <Icon name="delete-outline" size={20} color="#fff" style={styles.buttonIcon} />
+                    <Text style={styles.buttonText}>Delete Profile</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity style={[styles.button, styles.logoutButton]} onPress={handleLogout}>
+                    <Icon name="exit-to-app" size={20} color="#fff" style={styles.buttonIcon} />
+                    <Text style={styles.buttonText}>Log Out</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </>
+        )}
+      </ScrollView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  gradientBackground: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
   container: {
     flexGrow: 1,
     padding: 20,
-    backgroundColor: '#F5F5DC', // Beige background
   },
 
   // Password Change Mode Styles
@@ -992,6 +1215,7 @@ const styles = StyleSheet.create({
     elevation: 3,
     marginBottom: 8,
     width: "100%",
+    borderRadius: 10
   },
   updateButton: {
     backgroundColor: '#6B8E23', // Olive green
@@ -999,14 +1223,60 @@ const styles = StyleSheet.create({
   cancelButton: {
     backgroundColor: '#8A7B6B', // Muted brown
   },
-  buttonIcon: {
+  // Password Change Buttons
+  updatePasswordButtonContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    backgroundColor: '#6B8E23', // Olive green
+    shadowColor: '#5A3F2B',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    marginBottom: 12,
+    width: '100%',
+  },
+  updatePasswordIcon: {
     marginRight: 8,
     color: '#FFFFFF',
   },
-  passwordButtonText: {
+  updatePasswordText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
+    flexShrink: 1,
+    textAlign: 'center',
+  },
+  cancelPasswordButtonContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    backgroundColor: '#8A7B6B', // Muted brown
+    shadowColor: '#5A3F2B',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    marginBottom: 8,
+    width: '100%',
+  },
+  cancelPasswordIcon: {
+    marginRight: 8,
+    color: '#FFFFFF',
+  },
+  cancelPasswordText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+    flexShrink: 1,
+    textAlign: 'center',
   },
   passwordRequirements: {
     marginTop: 20,
@@ -1353,77 +1623,140 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
 
-  // Work Cards Styles
-  workCard: {
-    backgroundColor: '#F8F5F0',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 10,
-    borderLeftWidth: 4,
-    borderLeftColor: '#4682B4', // Steel blue
+  section: {
+    marginBottom: 25,
+    paddingHorizontal: 16,
   },
-  pendingWorkCard: {
-    backgroundColor: '#FFF8E1',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 10,
-    borderLeftWidth: 4,
-    borderLeftColor: '#FFA500', // Orange gold
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2c5530',
+    marginBottom: 15,
+    textAlign: 'center',
   },
-  workTitle: {
-    fontSize: 16,
+  
+  // Empty State
+  emptyState: {
+    alignItems: 'center',
+    padding: 40,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    borderStyle: 'dashed',
+  },
+  emptyStateIcon: {
+    fontSize: 48,
+    marginBottom: 10,
+  },
+  emptyStateText: {
+    fontSize: 18,
     fontWeight: '600',
-    color: '#5A3F2B',
+    color: '#6c757d',
     marginBottom: 5,
   },
-  workDescription: {
+  emptyStateSubtext: {
     fontSize: 14,
-    color: '#6B8E23',
-    marginBottom: 8,
-    lineHeight: 18,
+    color: '#adb5bd',
+    textAlign: 'center',
   },
-  workNGO: {
-    fontSize: 13,
-    color: '#4682B4',
-    fontStyle: 'italic',
-    marginBottom: 8,
+  
+  // Work Card
+  workCard: {
+    backgroundColor: 'white',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    borderLeftWidth: 4,
+    borderLeftColor: '#4CAF50',
   },
-  pickedDate: {
+  
+  // Card Header
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  workTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2c5530',
+    flex: 1,
+    marginRight: 10,
+  },
+  
+  // Priority Badge
+  statusBadge: {
+    backgroundColor: '#ffc107',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    minWidth: 60,
+  },
+  highPriorityBadge: {
+    backgroundColor: '#fd7e14',
+  },
+  urgentPriorityBadge: {
+    backgroundColor: '#dc3545',
+  },
+  statusText: {
+    color: 'white',
     fontSize: 12,
-    color: '#8A7B6B',
-    marginBottom: 10,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
-  pickWorkButton: {
+  
+  // Detail Rows
+  detailRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#6B8E23', // Olive green
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 6,
-    alignSelf: 'flex-start',
+    marginBottom: 8,
+    alignItems: 'flex-start',
   },
-  pickWorkButtonText: {
-    color: '#FFFFFF',
+  detailLabel: {
     fontSize: 14,
-    fontWeight: '500',
-    marginLeft: 5,
+    fontWeight: '600',
+    color: '#495057',
+    width: 120,
   },
-  completeWorkButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#6B8E23', // Olive green
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 6,
-    alignSelf: 'flex-start',
-  },
-  completeWorkButtonText: {
-    color: '#FFFFFF',
+  detailValue: {
     fontSize: 14,
-    fontWeight: '500',
-    marginLeft: 5,
+    color: '#6c757d',
+    flex: 1,
+  },
+  
+  // Complete Button
+  completeButton: {
+    backgroundColor: '#28a745',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  completeButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  
+  // No Data Text
+  noData: {
+    textAlign: 'center',
+    color: '#6c757d',
+    fontSize: 16,
+    fontStyle: 'italic',
+    marginVertical: 20,
   },
 
   // Medals Section
@@ -1458,96 +1791,6 @@ const styles = StyleSheet.create({
   medalSubtext: {
     fontSize: 11,
     color: '#6B8E23',
-  },
-
-  // Completed Works Section
-  completedWorksSection: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 15,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#5A3F2B',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: '#E8E0D5',
-  },
-  completedWorksContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginTop: 15,
-  },
-  imageContainer: {
-    position: 'relative',
-    width: 100,
-    height: 100,
-    borderRadius: 10,
-    overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: '#E8E0D5',
-  },
-  completedWorkImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 10,
-  },
-  deleteImageButton: {
-    position: 'absolute',
-    top: 5,
-    right: 5,
-    backgroundColor: 'rgba(220, 20, 60, 0.8)', // Crimson
-    width: 25,
-    height: 25,
-    borderRadius: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  imageIndex: {
-    position: 'absolute',
-    bottom: 5,
-    left: 5,
-    backgroundColor: 'rgba(90, 63, 43, 0.8)', // Brown
-    color: '#FFFFFF',
-    fontSize: 10,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-
-  // Empty States
-  emptyText: {
-    fontSize: 14,
-    color: '#8A7B6B',
-    textAlign: 'center',
-    fontStyle: 'italic',
-    marginVertical: 20,
-  },
-  emptyStateContainer: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  emptyStateIcon: {
-    marginBottom: 15,
-    color: '#8A7B6B',
-  },
-  emptyStateText: {
-    fontSize: 16,
-    color: '#8A7B6B',
-    marginBottom: 5,
-  },
-  emptyStateSubtext: {
-    fontSize: 12,
-    color: '#8A7B6B',
-    textAlign: 'center',
-  },
-  noData: {
-    textAlign: 'center',
-    color: '#8A7B6B',
-    fontStyle: 'italic',
-    padding: 10,
   },
 
   // Achievements Section
@@ -1616,5 +1859,147 @@ const styles = StyleSheet.create({
     marginLeft: 6,
     flex: 1,
     fontWeight: '500',
+  },
+  navigateButton: {
+    backgroundColor: '#2196F3',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 20,
+    marginHorizontal: 10,
+  },
+  navigateButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+
+  completedWorkCard: {
+    backgroundColor: 'white',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    borderLeftWidth: 4,
+    borderLeftColor: '#28a745',
+  },
+
+  photosSection: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+
+  photosLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#495057',
+    marginBottom: 8,
+  },
+
+  photosScrollView: {
+    marginBottom: 12,
+  },
+
+  photosContainer: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+
+  photoContainer: {
+    position: 'relative',
+    alignItems: 'center',
+  },
+
+  photo: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
+    backgroundColor: '#f8f9fa',
+  },
+
+  photoNumber: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    color: 'white',
+    fontSize: 12,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+
+  noPhotosText: {
+    fontSize: 14,
+    color: '#6c757d',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginVertical: 12,
+  },
+
+  addPhotoButton: {
+    backgroundColor: '#17a2b8',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+
+  disabledButton: {
+    backgroundColor: '#6c757d',
+    opacity: 0.6,
+  },
+
+  addPhotoButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+
+  photoContainer: {
+    position: 'relative',
+    alignItems: 'center',
+  },
+
+  deletePhotoButton: {
+    position: 'absolute',
+    top: 5,
+    left: 5,
+    backgroundColor: 'rgba(220, 53, 69, 0.9)',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+
+  deletePhotoButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+    lineHeight: 20,
+  },
+
+  photoNumber: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    color: 'white',
+    fontSize: 12,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
   },
 });

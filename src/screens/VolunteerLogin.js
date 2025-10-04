@@ -6,6 +6,7 @@ import Toast from 'react-native-toast-message';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { db, auth } from '../../firebaseConfig';
 import { doc, getDoc } from 'firebase/firestore';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function VolunteerLogin() {
   const navigation = useNavigation();
@@ -123,89 +124,112 @@ export default function VolunteerLogin() {
 
   useEffect(() => {
     navigation.setOptions({
-      title: 'Volunteer Login'
+      title: 'Volunteer Login',
+      headerBackground: () => (
+        <LinearGradient
+          colors={['#87b34eff', '#d5d5b1ff', '#87b34eff']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{ flex: 1 }}
+        />
+      ),
+      headerTintColor: '#5A3F2B', 
+      headerTitleStyle: {
+        fontWeight: 'bold',
+        color: '#fff',
+      },
     });
   }, [navigation]);
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <View style={styles.card}>
-        <Text style={styles.heading}>Login Here!</Text>
-        <Text style={styles.subtitle}>Your Journey to Make a Difference Starts Here</Text>
+    <LinearGradient
+      colors={['#87b34eff', '#d5d5b1ff', '#87b34eff']} 
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.gradientBackground}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <View style={styles.card}>
+          <Text style={styles.heading}>Login Here!</Text>
+          <Text style={styles.subtitle}>Your Journey to Make a Difference Starts Here</Text>
 
-        <View style={styles.field}>
-          <Text style={styles.label}>Email Address: </Text>
-          <View style={styles.inputContainer}>
-            <Icon name="email" size={20} color="#6c757d" style={styles.inputIcon} />
-            <TextInput 
-              style={styles.input} 
-              placeholder="Enter your email" 
-              value={email} 
-              onChangeText={setEmail} 
-              keyboardType="email-address" 
-              autoCapitalize="none"
-            />
+          <View style={styles.field}>
+            <Text style={styles.label}>Email Address: </Text>
+            <View style={styles.inputContainer}>
+              <Icon name="email" size={20} color="#6c757d" style={styles.inputIcon} />
+              <TextInput 
+                style={styles.input} 
+                placeholder="Enter your email" 
+                value={email} 
+                onChangeText={setEmail} 
+                keyboardType="email-address" 
+                autoCapitalize="none"
+              />
+            </View>
           </View>
-        </View>
 
-        <View style={styles.field}>
-          <Text style={styles.label}>Password: </Text>
-          <View style={styles.inputContainer}>
-            <Icon name="lock" size={20} color="#6c757d" style={styles.inputIcon} />
-            <TextInput 
-              style={styles.input} 
-              placeholder="Enter your password" 
-              value={password} 
-              onChangeText={setPassword} 
-              secureTextEntry
-            />
+          <View style={styles.field}>
+            <Text style={styles.label}>Password: </Text>
+            <View style={styles.inputContainer}>
+              <Icon name="lock" size={20} color="#6c757d" style={styles.inputIcon} />
+              <TextInput 
+                style={styles.input} 
+                placeholder="Enter your password" 
+                value={password} 
+                onChangeText={setPassword} 
+                secureTextEntry
+              />
+            </View>
           </View>
-        </View>
 
-        <TouchableOpacity 
-          style={[styles.button, loading && styles.buttonDisabled]} 
-          onPress={handleLogin}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Login Here</Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => navigation.navigate('forgotPassword')} style={styles.linkContainer}>
-          <Text style={styles.linkText}>Forgot Password?</Text>
-        </TouchableOpacity>
-
-        <View style={styles.registrationContainer}>
-          <Text style={styles.registerText}>Don't have an account?</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('volunteerSignUp')}>
-            <Text style={styles.registerLink}>Sign Up</Text>
+          <TouchableOpacity 
+            style={[styles.button, loading && styles.buttonDisabled]} 
+            onPress={handleLogin}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Login Here</Text>
+            )}
           </TouchableOpacity>
-        </View>
 
-        {/* Additional info for new users */}
-        {route.params?.signupSuccess && (
-          <View style={styles.infoBox}>
-            <Icon name="info" size={18} color="#17a2b8" />
-            <Text style={styles.infoText}>
-              Please check your email inbox and verify your account before logging in.
-            </Text>
+          <TouchableOpacity onPress={() => navigation.navigate('volunteerForgotPassword')} style={styles.linkContainer}>
+            <Text style={styles.linkText}>Forgot Password?</Text>
+          </TouchableOpacity>
+
+          <View style={styles.registrationContainer}>
+            <Text style={styles.registerText}>Don't have an account?</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('volunteerSignUp')}>
+              <Text style={styles.registerLink}>Sign Up</Text>
+            </TouchableOpacity>
           </View>
-        )}
-      </View>
-    </KeyboardAvoidingView>
+
+          {/* Additional info for new users */}
+          {route.params?.signupSuccess && (
+            <View style={styles.infoBox}>
+              <Icon name="info" size={18} color="#17a2b8" />
+              <Text style={styles.infoText}>
+                Please check your email inbox and verify your account before logging in.
+              </Text>
+            </View>
+          )}
+        </View>
+      </KeyboardAvoidingView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  gradientBackground: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
   container: {
     flex: 1,
-    backgroundColor: '#F5F5DC',
     justifyContent: 'center',
     paddingHorizontal: 20
   },
