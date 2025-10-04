@@ -1,15 +1,14 @@
 import React, { useState , useEffect } from 'react';
 import { View, Text, Image, TextInput, TouchableOpacity, ScrollView, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
 import { CheckBox } from 'react-native-elements';
 import { launchImageLibrary } from 'react-native-image-picker';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { auth, db, storage } from '../../firebaseConfig';
+import { auth, db } from '../../firebaseConfig';
 import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import Toast from 'react-native-toast-message';
 import { useNavigation } from '@react-navigation/native';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function VolunteerSignUp() {
   const navigation = useNavigation();
@@ -62,6 +61,19 @@ export default function VolunteerSignUp() {
   useEffect(() => {
     navigation.setOptions({
       title: 'Volunteer Registration',
+      headerBackground: () => (
+        <LinearGradient
+          colors={['#87b34eff', '#d5d5b1ff', '#87b34eff']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{ flex: 1 }}
+        />
+      ),
+      headerTintColor: '#5A3F2B', 
+      headerTitleStyle: {
+        fontWeight: 'bold',
+        color: '#fff',
+      },
     });
   }, [navigation]);
 
@@ -185,171 +197,157 @@ export default function VolunteerSignUp() {
     }
   };
 
-  // Add a resend verification email function (optional - can be used elsewhere)
-  const resendVerificationEmail = async () => {
-    const user = auth.currentUser;
-    
-    if (user && !user.emailVerified) {
-      try {
-        await sendEmailVerification(user);
-        Toast.show({
-          type: 'success',
-          text1: 'Verification Email Sent',
-          text2: 'A new verification email has been sent to your email address.',
-          position: 'top'
-        });
-      } catch (error) {
-        Toast.show({
-          type: 'error',
-          text1: 'Error',
-          text2: 'Failed to send verification email. Please try again.',
-          position: 'top'
-        });
-      }
-    }
-  };
-
   return (
-    <KeyboardAvoidingView 
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.card}>
-          <Text style={styles.heading}>Volunteer Sign Up</Text>
-          <Text style={styles.subtitle}>Join our community and make a difference</Text>
+    <LinearGradient
+      colors={['#87b34eff', '#d5d5b1ff', '#87b34eff']} 
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.gradientBackground}>
+      <KeyboardAvoidingView 
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContainer}>
+          <View style={styles.card}>
+            <Text style={styles.heading}>Volunteer Sign Up</Text>
+            <Text style={styles.subtitle}>Join our community and make a difference</Text>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>Full Name</Text>
-            <View style={styles.inputContainer}>
-              <Icon name="person" size={20} color="#6c757d" style={styles.inputIcon} />
-              <TextInput style={styles.input} placeholder="Enter your full name" value={name} onChangeText={setName}/>
+            <View style={styles.field}>
+              <Text style={styles.label}>Full Name</Text>
+              <View style={styles.inputContainer}>
+                <Icon name="person" size={20} color="#6c757d" style={styles.inputIcon} />
+                <TextInput style={styles.input} placeholder="Enter your full name" value={name} onChangeText={setName}/>
+              </View>
             </View>
-          </View>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>Email Address</Text>
-            <View style={styles.inputContainer}>
-              <Icon name="email" size={20} color="#6c757d" style={styles.inputIcon} />
-              <TextInput style={styles.input} placeholder="Enter your email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none"/>
+            <View style={styles.field}>
+              <Text style={styles.label}>Email Address</Text>
+              <View style={styles.inputContainer}>
+                <Icon name="email" size={20} color="#6c757d" style={styles.inputIcon} />
+                <TextInput style={styles.input} placeholder="Enter your email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none"/>
+              </View>
             </View>
-          </View>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>Phone Number</Text>
-            <View style={styles.inputContainer}>
-              <Icon name="phone" size={20} color="#6c757d" style={styles.inputIcon} />
-              <TextInput style={styles.input} placeholder="Enter your phone number" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+            <View style={styles.field}>
+              <Text style={styles.label}>Phone Number</Text>
+              <View style={styles.inputContainer}>
+                <Icon name="phone" size={20} color="#6c757d" style={styles.inputIcon} />
+                <TextInput style={styles.input} placeholder="Enter your phone number" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+              </View>
             </View>
-          </View>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>Address</Text>
-            <View style={styles.inputContainer}>
-              <Icon name="home" size={20} color="#6c757d" style={styles.inputIcon} />
-              <TextInput style={styles.input} placeholder="Enter your address" value={address} onChangeText={setAddress} />
+            <View style={styles.field}>
+              <Text style={styles.label}>Address</Text>
+              <View style={styles.inputContainer}>
+                <Icon name="home" size={20} color="#6c757d" style={styles.inputIcon} />
+                <TextInput style={styles.input} placeholder="Enter your address" value={address} onChangeText={setAddress} />
+              </View>
             </View>
-          </View>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>Password</Text>
-            <View style={styles.inputContainer}>
-              <Icon name="lock" size={20} color="#6c757d" style={styles.inputIcon} />
-              <TextInput style={styles.input} placeholder="Create a password (min. 6 characters)" value={password} onChangeText={setPassword} secureTextEntry />
+            <View style={styles.field}>
+              <Text style={styles.label}>Password</Text>
+              <View style={styles.inputContainer}>
+                <Icon name="lock" size={20} color="#6c757d" style={styles.inputIcon} />
+                <TextInput style={styles.input} placeholder="Create a password (min. 6 characters)" value={password} onChangeText={setPassword} secureTextEntry />
+              </View>
             </View>
-          </View>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>Confirm Password</Text>
-            <View style={styles.inputContainer}>
-              <Icon name="lock-outline" size={20} color="#6c757d" style={styles.inputIcon} />
-              <TextInput style={styles.input} placeholder="Confirm your password" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
+            <View style={styles.field}>
+              <Text style={styles.label}>Confirm Password</Text>
+              <View style={styles.inputContainer}>
+                <Icon name="lock-outline" size={20} color="#6c757d" style={styles.inputIcon} />
+                <TextInput style={styles.input} placeholder="Confirm your password" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
+              </View>
             </View>
-          </View>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>Availability Status</Text>
-            <View style={styles.inputContainer}>
-              <Icon name="event-available" size={20} color="#6c757d" style={styles.inputIcon} />
-              <TextInput style={styles.input} placeholder="Available / Not Available" value={availability} onChangeText={setAvailability} />
+            <View style={styles.field}>
+              <Text style={styles.label}>Availability Status</Text>
+              <View style={styles.inputContainer}>
+                <Icon name="event-available" size={20} color="#6c757d" style={styles.inputIcon} />
+                <TextInput style={styles.input} placeholder="Available / Not Available" value={availability} onChangeText={setAvailability} />
+              </View>
             </View>
-          </View>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>Profile Photo</Text>
-            <View style={styles.imageUploadContainer}>
-              {profilePhoto ? (
-                <Image source={{uri: profilePhoto}} style={styles.imagePreview}/>
-              ) : (
-                <View style={styles.imagePlaceholder}>
-                  <Icon name="camera-alt" size={30} color="#6c757d" />
-                  <Text style={styles.placeholderText}>No Image Selected</Text>
+            <View style={styles.field}>
+              <Text style={styles.label}>Profile Photo</Text>
+              <View style={styles.imageUploadContainer}>
+                {profilePhoto ? (
+                  <Image source={{uri: profilePhoto}} style={styles.imagePreview}/>
+                ) : (
+                  <View style={styles.imagePlaceholder}>
+                    <Icon name="camera-alt" size={30} color="#6c757d" />
+                    <Text style={styles.placeholderText}>No Image Selected</Text>
+                  </View>
+                )}
+
+                <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
+                  <Icon name="cloud-upload" size={16} color="#fff" style={styles.uploadIcon} />
+                  <Text style={styles.uploadButtonText}>Upload Photo</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>Skills</Text>
+              <View style={styles.skillsContainer}>
+                <View style={styles.checkboxRow}>
+                  <CheckBox title="Cooking" checked={skills.cooking} onPress={() => toggleSkill('cooking')} containerStyle={styles.checkboxContainer} textStyle={styles.checkboxText} checkedColor="#4CAF50"/>
+                  <CheckBox title="Delivery" checked={skills.delivery} onPress={() => toggleSkill('delivery')} containerStyle={styles.checkboxContainer} textStyle={styles.checkboxText} checkedColor="#4CAF50"/>
                 </View>
+                <View style={styles.checkboxRow}>
+                  <CheckBox title="Packing" checked={skills.packing} onPress={() => toggleSkill('packing')} containerStyle={styles.checkboxContainer} textStyle={styles.checkboxText} checkedColor="#4CAF50"/>
+                  <CheckBox title="Driving" checked={skills.driving} onPress={() => toggleSkill('driving')} containerStyle={styles.checkboxContainer} textStyle={styles.checkboxText} checkedColor="#4CAF50"/>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>Preferred Volunteering Area</Text>
+              <View style={styles.inputContainer}>
+                <Icon name="place" size={20} color="#6c757d" style={styles.inputIcon} />
+                <TextInput style={styles.input} placeholder="e.g., City Center, Food Bank" value={preferredArea} onChangeText={setPreferredArea}/>
+              </View>
+            </View>
+
+            <TouchableOpacity 
+              style={[styles.button, loading && styles.buttonDisabled]} 
+              onPress={handleSignup}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.buttonText}>Create Account</Text>
               )}
-
-              <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
-                <Icon name="cloud-upload" size={16} color="#fff" style={styles.uploadIcon} />
-                <Text style={styles.uploadButtonText}>Upload Photo</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={styles.field}>
-            <Text style={styles.label}>Skills</Text>
-            <View style={styles.skillsContainer}>
-              <View style={styles.checkboxRow}>
-                <CheckBox title="Cooking" checked={skills.cooking} onPress={() => toggleSkill('cooking')} containerStyle={styles.checkboxContainer} textStyle={styles.checkboxText} checkedColor="#4CAF50"/>
-                <CheckBox title="Delivery" checked={skills.delivery} onPress={() => toggleSkill('delivery')} containerStyle={styles.checkboxContainer} textStyle={styles.checkboxText} checkedColor="#4CAF50"/>
-              </View>
-              <View style={styles.checkboxRow}>
-                <CheckBox title="Packing" checked={skills.packing} onPress={() => toggleSkill('packing')} containerStyle={styles.checkboxContainer} textStyle={styles.checkboxText} checkedColor="#4CAF50"/>
-                <CheckBox title="Driving" checked={skills.driving} onPress={() => toggleSkill('driving')} containerStyle={styles.checkboxContainer} textStyle={styles.checkboxText} checkedColor="#4CAF50"/>
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.field}>
-            <Text style={styles.label}>Preferred Volunteering Area</Text>
-            <View style={styles.inputContainer}>
-              <Icon name="place" size={20} color="#6c757d" style={styles.inputIcon} />
-              <TextInput style={styles.input} placeholder="e.g., City Center, Food Bank" value={preferredArea} onChangeText={setPreferredArea}/>
-            </View>
-          </View>
-
-          <TouchableOpacity 
-            style={[styles.button, loading && styles.buttonDisabled]} 
-            onPress={handleSignup}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>Create Account</Text>
-            )}
-          </TouchableOpacity>
-          
-          <Text style={styles.termsText}>
-            By signing up, you agree to our Terms of Service and Privacy Policy
-          </Text>
-
-          <TouchableOpacity 
-            style={styles.loginLink}
-            onPress={() => navigation.navigate('volunteerLogin')}
-          >
-            <Text style={styles.loginText}>
-              Already have an account? <Text style={styles.loginLinkText}>Login here</Text>
+            </TouchableOpacity>
+            
+            <Text style={styles.termsText}>
+              By signing up, you agree to our Terms of Service and Privacy Policy
             </Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+
+            <TouchableOpacity 
+              style={styles.loginLink}
+              onPress={() => navigation.navigate('volunteerLogin')}
+            >
+              <Text style={styles.loginText}>
+                Already have an account? <Text style={styles.loginLinkText}>Login here</Text>
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  gradientBackground: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
   container: {
     flex: 1,
-    backgroundColor: '#F5F5DC',
   },
   scrollContainer: {
     padding: 20,
