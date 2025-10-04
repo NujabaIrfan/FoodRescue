@@ -23,12 +23,21 @@ import DateTimePicker from 'react-native-ui-datepicker';
 } from '@maplibre/maplibre-react-native';*/
 
 import pinImage from '../../assets/pin.png';
+import { addDoc, collection } from 'firebase/firestore';
+import { auth, db } from '../../firebaseConfig';
 
-export default function CreateEvent() {
+export default function CreateEvent({ route }) {
+
+  const { id } = route.params
+
   const [image, setImage] = useState(require('../../assets/default-image.jpg'));
-  const coordinatesRef = useRef();
+  const [name, setName] = useState("")
+  const [description, setDescription] = useState("")
   const [eventDateTime, setEventDateTime] = useState(new Date());
   const [hasPhysicalVenue, setHasPhysicalVenue] = useState(false);
+  // todo: replace hardcoded venue with nominatim geocoded data
+  const [venue, setVenue] = useState("Colombo, Sri Lanka")
+  const coordinatesRef = useRef();
 
   const uploadImage = async () => {
     let res = await launchImageLibrary({
@@ -66,17 +75,53 @@ export default function CreateEvent() {
     requestLocationPermission();
   }, [requestLocationPermission]);
 
+  const createEvent = async () => {
+    const { currentUser } = auth;
+    if (!currentUser) return Toast.show({
+      type: "error",
+      text1: "You must log in to perform this action",
+      position: 'top'
+    });
+    if (!name.trim()) return Toast.show({
+      type: "error",
+      text1: "Please provide a valid name for your organization",
+      position: "top"
+    });
+    if (!description.trim()) return Toast.show({
+      type: "error",
+      text1: "Please provide a valid description for your organization",
+      position: "top"
+    })
+    
+    const eventRef = collection(db, "Organizations", id, "events")
+
+    addDoc(eventRef, {
+      name,
+      description,
+      eventDateTime,
+      venue,
+      image
+    })
+
+    navigator.navigate("organization", { id })
+
+  }
+
   return (
     <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
       <Text style={styles.primaryHeading}>Create an event</Text>
 
       <Text style={styles.label}>Event name</Text>
-      <TextInput style={styles.input} placeholder="Name of the event" />
+      <TextInput
+        style={styles.input}
+        onChange={(evt) => setName(evt.target.value)}
+        placeholder="Name of the event" />
 
       <Text style={styles.label}>Description</Text>
       <TextInput
         style={styles.textarea}
         placeholder="Type here"
+        onChange={(evt) => setDescription(evt.target.value)}
         multiline={true}
       />
 
@@ -152,7 +197,7 @@ export default function CreateEvent() {
           <Text style={styles.infoText}>Max file size: 2MB</Text>
         </View>
       </View>
-      <TouchableOpacity style={styles.button}>
+      <TouchableOpacity style={styles.button} onPress={createEvent}>
         <Text style={styles.buttonText}>Create event</Text>
       </TouchableOpacity>
     </ScrollView>
