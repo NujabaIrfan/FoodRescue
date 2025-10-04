@@ -1,9 +1,10 @@
-import { doc, updateDoc } from 'firebase/firestore';
+import { deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { Alert, Image, Platform, TouchableOpacity } from 'react-native';
 import { StyleSheet, Text, View } from 'react-native';
 import Toast from 'react-native-toast-message';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { db } from '../../firebaseConfig';
+import { ref } from 'firebase/storage';
 
 const OrganizationEvent = ({
   organizationId,
@@ -16,28 +17,32 @@ const OrganizationEvent = ({
   showEditButton,
   showDeleteButton,
   showCancelButton,
+  refreshFlag,
+  setRefreshFlag
 }) => {
 
-  const deleteEvent = () => {
-    console.log("delete event")
+  const deleteEvent = async () => {
+    await deleteDoc(doc(db, "Organizations", organizationId, "events", eventId))
+    if (setRefreshFlag) setRefreshFlag(!refreshFlag)
   }
 
   const cancelEvent = async () => {
     await updateDoc(doc(db, "Organizations", organizationId, "events", eventId), {
       eventDateTime: 0
     })
+    if (setRefreshFlag) setRefreshFlag(!refreshFlag)
   }
 
   const showDeleteConfirmation = () => {
     if (Platform.OS === "web") {
-      if (window.confirm("Are you sure to delete this event?")) cancelEvent();
+      if (window.confirm("Are you sure to delete this event?")) deleteEvent();
     } else {
       Alert.alert(
         "Confirm",
         "Are you sure to cancel this event?",
         [
           { text: "No", style: "cancel" },
-          { text: "Cancel event", style: "destructive", onPress: cancelEvent }
+          { text: "Cancel event", style: "destructive", onPress: deleteEvent }
         ]
       );
     }
@@ -53,7 +58,7 @@ const OrganizationEvent = ({
         "Are you sure to cancel this event?",
         [
           { text: "Cancel", style: "cancel" },
-          { text: "Delete", style: "destructive", onPress: deleteEvent }
+          { text: "Delete", style: "destructive", onPress: cancelEvent }
         ]
       );
     }

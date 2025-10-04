@@ -25,6 +25,7 @@ import DateTimePicker from 'react-native-ui-datepicker';
 import pinImage from '../../assets/pin.png';
 import { addDoc, collection } from 'firebase/firestore';
 import { auth, db } from '../../firebaseConfig';
+import { useNavigation } from '@react-navigation/native';
 
 export default function CreateEvent({ route }) {
 
@@ -38,6 +39,7 @@ export default function CreateEvent({ route }) {
   // todo: replace hardcoded venue with nominatim geocoded data
   const [venue, setVenue] = useState("Colombo, Sri Lanka")
   const coordinatesRef = useRef();
+  const navigator = useNavigation()
 
   const uploadImage = async () => {
     let res = await launchImageLibrary({

@@ -16,6 +16,7 @@ export default function OrganizationEvents({ route }) {
 
   const [searchQuery, setSearchQuery] = useState("")
   const [events, setEvents] = useState([])
+  const [refreshFlag, setRefreshFlag] = useState(false)
 
   useEffect(() => {
     (async () => {
@@ -31,7 +32,7 @@ export default function OrganizationEvents({ route }) {
         console.error(err)
       }
     })()
-  }, [id])
+  }, [id, refreshFlag])
 
   const now = new Date()
   const filteredEvents = events.filter(event => event.name.trim().toLowerCase().includes(searchQuery.trim().toLowerCase()))
@@ -82,9 +83,12 @@ export default function OrganizationEvents({ route }) {
               name={event.name}
               description={event.description}
               eventDateTime={new Date(event.eventDateTime.toDate())}
-              showEditButton={true} // todo: set the flag based on who is logged in
+              // showEditButton={true} // todo: set the flag based on who is logged in
+              // im lazy to implement the edit feature. Don't think it is necessary. So I'll leve it as it is
               showCancelButton={true} // todo: set the flag based on who is logged in
               venue={event.venue}
+              refreshFlag={refreshFlag}
+              setRefreshFlag={setRefreshFlag}
             />
           ))}
         <Text style={styles.primaryHeading}>Past events</Text>
@@ -104,6 +108,8 @@ export default function OrganizationEvents({ route }) {
               eventDateTime={event.eventDateTime === 0 ? 0 : new Date(event.eventDateTime.toDate())}
               showDeleteButton={true} // todo: set the flag based on who is logged in
               venue={event.venue}
+              refreshFlag={refreshFlag}
+              setRefreshFlag={setRefreshFlag}
             />
           )))}
       </ScrollView>
