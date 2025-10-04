@@ -26,6 +26,7 @@ import Surplus from './src/screens/Surplus';
 import SurplusList from './src/screens/SurplusList';
 import ChatbotScreen from './src/screens/ChatbotScreen';
 import OrganizationVolunteers from './src/screens/OrganizationVolunteers';
+import VolunteerForgotPassword from './src/screens/VolunteerForgotPassword';
 import DonorFoodRequest from './src/screens/DonorFoodRequest';
 
 const RootStack = createNativeStackNavigator({
@@ -54,6 +55,7 @@ const RootStack = createNativeStackNavigator({
     chatbotScreen: ChatbotScreen,
     surplus:Surplus,
     surplusList:SurplusList,
+    volunteerForgotPassword: VolunteerForgotPassword,
     organizationVolunteers: OrganizationVolunteers,
     donorFoodRequest: DonorFoodRequest
   },
