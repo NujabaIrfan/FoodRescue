@@ -103,6 +103,14 @@ const Organization = ({ route }) => {
           <TouchableOpacity style={styles.button} onPress={() => navigator.navigate("organizationVolunteers", { id })}>
             <Text style={styles.buttonText}>View members</Text>
           </TouchableOpacity>
+          {hasAdminRights && (
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() => navigator.navigate("organizationSettings", { id })}
+            >
+              <Text style={styles.buttonText}>View settings</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
       <Text

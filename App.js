@@ -31,6 +31,7 @@ import OrganizationEvents from './src/screens/OrganizationEvents';
 import VolunteerForgotPassword from './src/screens/VolunteerForgotPassword';
 import DonorFoodRequest from './src/screens/DonorFoodRequest';
 import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
+import OrganizationSettings from './src/screens/OrganizationSettings';
 
 const Tab = createBottomTabNavigator()
 
@@ -103,7 +104,8 @@ const RootStack = createNativeStackNavigator({
     organizationVolunteers: OrganizationVolunteers,
     organizationEvents: OrganizationEvents,
     volunteerForgotPassword: VolunteerForgotPassword,
-    donorFoodRequest: DonorFoodRequest
+    donorFoodRequest: DonorFoodRequest,
+    organizationSettings: OrganizationSettings
   },
 });
 
