@@ -22,21 +22,21 @@ const FoodRequestViewer = () => {
   const [updatingId, setUpdatingId] = useState(null);
   const navigation = useNavigation(); 
 
-      useEffect(() => {
-          navigation.setOptions({
-              title: 'Surplus List',
-              headerStyle: {
-                  backgroundColor: '#389c9a',
-                  elevation: 0, // Android shadow
-                  shadowOpacity: 0, // iOS shadow
-              },
-              headerTintColor: '#fff', // back arrow / text color
-              headerTitleStyle: {
-                  fontWeight: 'bold',
-                  fontSize: 20,
-              },
-          });
-      }, [navigation]);
+  useEffect(() => {
+    navigation.setOptions({
+      title: 'Surplus List',
+      headerStyle: {
+        backgroundColor: '#389c9a',
+        elevation: 0,
+        shadowOpacity: 0,
+      },
+      headerTintColor: '#fff',
+      headerTitleStyle: {
+        fontWeight: 'bold',
+        fontSize: 20,
+      },
+    });
+  }, [navigation]);
 
   useEffect(() => {
     fetchFoodRequests();
@@ -66,7 +66,6 @@ const FoodRequestViewer = () => {
       const batch = writeBatch(db);
       
       for (const item of requestItems) {
-        // Find matching surplus items by name
         const surplusQuery = query(
           collection(db, 'surplusItems'),
           where('name', '==', item.item),
@@ -82,7 +81,6 @@ const FoodRequestViewer = () => {
 
         let remainingQuantity = item.amount;
         
-        // Process surplus items to reduce quantity
         for (const surplusDoc of surplusSnapshot.docs) {
           if (remainingQuantity <= 0) break;
           
@@ -94,18 +92,15 @@ const FoodRequestViewer = () => {
             const quantityToReduce = Math.min(remainingQuantity, currentQuantity);
             const newQuantity = currentQuantity - quantityToReduce;
             
-            // Update the surplus item
             const surplusRef = doc(db, 'surplusItems', surplusId);
             
             if (newQuantity === 0) {
-              // If quantity becomes zero, mark as unavailable
               batch.update(surplusRef, {
                 quantity: 0,
                 status: 'unavailable',
                 updatedAt: new Date()
               });
             } else {
-              // Otherwise just reduce the quantity
               batch.update(surplusRef, {
                 quantity: newQuantity,
                 updatedAt: new Date()
@@ -122,7 +117,6 @@ const FoodRequestViewer = () => {
         }
       }
       
-      // Commit all updates
       await batch.commit();
       console.log('Successfully updated surplus items');
       
@@ -132,106 +126,121 @@ const FoodRequestViewer = () => {
     }
   };
 
-  const updateRequestStatus = async (requestId, newStatus) => {
-    try {
-      setUpdatingId(requestId);
-      const db = getFirestore();
-      const requestRef = doc(db, 'foodRequests', requestId);
-      
-      // Get the current request data to access items
-      const currentRequest = requests.find(req => req.id === requestId);
-      const requestItems = currentRequest?.foodRequest?.items || [];
-
-      const updateData = {
-        status: newStatus,
-        updatedAt: new Date(),
-      };
-
-      // Also update the nested foodRequest status using dot notation
-      updateData['foodRequest.status'] = newStatus;
-
-      // Add acceptedAt timestamp if accepting
-      if (newStatus === 'Accepted') {
-        updateData.acceptedAt = new Date();
-        updateData.acceptedBy = 'current_user_id';
-        updateData.acceptedByVolunteer = 'Volunteer';
-
-        // Update surplus items when request is accepted
-        try {
-          await updateSurplusItems(requestItems);
-          console.log('Surplus items updated successfully');
-        } catch (surplusError) {
-          // Even if surplus update fails, still mark the request as accepted
-          // but show a warning to the user
-          console.warn('Request accepted but surplus update failed:', surplusError);
-          Alert.alert(
-            'Warning', 
-            'Request accepted but there was an issue updating inventory. Please check surplus items manually.'
-          );
-        }
-      }
-
-      // Add completedAt timestamp if rejecting
-      if (newStatus === 'Rejected') {
-        updateData.completedAt = new Date();
-        updateData.completedBy = 'current_user_id';
-        updateData.completedByVolunteer = 'Volunteer';
-      }
-
-      await updateDoc(requestRef, updateData);
-      
-      // Update local state immediately - update both status fields
-      setRequests(prevRequests =>
-        prevRequests.map(request =>
-          request.id === requestId
-            ? { 
-                ...request, 
-                status: newStatus,
-                foodRequest: {
-                  ...request.foodRequest,
-                  status: newStatus
-                },
-                ...(newStatus === 'Accepted' && {
-                  acceptedAt: new Date(),
-                  acceptedBy: 'current_user_id',
-                  acceptedByVolunteer: 'Volunteer'
-                }),
-                ...(newStatus === 'Rejected' && {
-                  completedAt: new Date(),
-                  completedBy: 'current_user_id',
-                  completedByVolunteer: 'Volunteer'
-                })
-              }
-            : request
-        )
-      );
-      
-      Alert.alert('Success', `Request ${newStatus.toLowerCase()} successfully!`);
-    } catch (err) {
-      Alert.alert('Error', `Failed to update request: ${err.message}`);
-    } finally {
-      setUpdatingId(null);
-    }
-  };
-
-  const handleAccept = (requestId) => {
+  const handleApprove = async (requestId) => {
     Alert.alert(
-      'Accept Request',
-      'Are you sure you want to accept this food request? This will reduce the available surplus items quantity.',
+      'Approve Request',
+      'Are you sure you want to approve this food request? This will reduce the available surplus items quantity.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Accept', onPress: () => updateRequestStatus(requestId, 'Accepted') }
+        { 
+          text: 'Approve', 
+          onPress: async () => {
+            try {
+              setUpdatingId(requestId);
+              const db = getFirestore();
+              const requestRef = doc(db, 'foodRequests', requestId);
+              
+              const currentRequest = requests.find(req => req.id === requestId);
+              const requestItems = currentRequest?.foodRequest?.items || [];
+
+              // Update foodRequest.status to "Approved"
+              const updateData = {
+                'foodRequest.status': 'Approved',
+                donorApprovedAt: new Date(),
+                updatedAt: new Date(),
+              };
+
+              // Update surplus items
+              try {
+                await updateSurplusItems(requestItems);
+                console.log('Surplus items updated successfully');
+              } catch (surplusError) {
+                console.warn('Request approved but surplus update failed:', surplusError);
+                Alert.alert(
+                  'Warning', 
+                  'Request approved but there was an issue updating inventory. Please check surplus items manually.'
+                );
+              }
+
+              // Update the request document
+              await updateDoc(requestRef, updateData);
+              
+              // Update local state
+              setRequests(prevRequests =>
+                prevRequests.map(request =>
+                  request.id === requestId
+                    ? { 
+                        ...request,
+                        foodRequest: {
+                          ...request.foodRequest,
+                          status: 'Approved'
+                        },
+                        donorApprovedAt: new Date()
+                      }
+                    : request
+                )
+              );
+              
+              Alert.alert('Success', 'Request approved successfully!');
+            } catch (err) {
+              Alert.alert('Error', `Failed to approve request: ${err.message}`);
+            } finally {
+              setUpdatingId(null);
+            }
+          }
+        }
       ]
     );
   };
 
-  const handleReject = (requestId) => {
+  const handleReject = async (requestId) => {
     Alert.alert(
       'Reject Request',
       'Are you sure you want to reject this food request?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Reject', onPress: () => updateRequestStatus(requestId, 'Rejected') }
+        { 
+          text: 'Reject', 
+          onPress: async () => {
+            try {
+              setUpdatingId(requestId);
+              const db = getFirestore();
+              const requestRef = doc(db, 'foodRequests', requestId);
+
+              // Update foodRequest.status to "Rejected"
+              const updateData = {
+                'foodRequest.status': 'Rejected',
+                donorRejectedAt: new Date(),
+                updatedAt: new Date(),
+              };
+
+              // Update the request document
+              await updateDoc(requestRef, updateData);
+              
+              // Update local state
+              setRequests(prevRequests =>
+                prevRequests.map(request =>
+                  request.id === requestId
+                    ? { 
+                        ...request,
+                        foodRequest: {
+                          ...request.foodRequest,
+                          status: 'Rejected'
+                        },
+                        donorRejectedAt: new Date()
+                      }
+                    : request
+                )
+              );
+              
+              Alert.alert('Success', 'Request rejected successfully!');
+            } catch (err) {
+              Alert.alert('Error', `Failed to reject request: ${err.message}`);
+            } finally {
+              setUpdatingId(null);
+            }
+          }
+        }
       ]
     );
   };
@@ -252,7 +261,7 @@ const FoodRequestViewer = () => {
     switch (status?.toLowerCase()) {
       case 'completed':
         return '#10b981';
-      case 'accepted':
+      case 'approved':
         return '#3b82f6';
       case 'pending':
         return '#f59e0b';
@@ -277,25 +286,23 @@ const FoodRequestViewer = () => {
   };
 
   const renderActionButtons = (request) => {
-    const currentStatus = request.status?.toLowerCase();
+    const currentStatus = request.foodRequest?.status?.toLowerCase();
     
-    // Don't show buttons for completed or rejected requests
-    if (currentStatus === 'completed' || currentStatus === 'rejected' || currentStatus === 'accepted') {
+    if (currentStatus === 'approved' || currentStatus === 'completed' || currentStatus === 'rejected') {
       return (
         <View style={[styles.actionButtons, styles.singleButton]}>
           <TouchableOpacity
-            style={[styles.actionButton, styles.completedButton, { backgroundColor: getStatusColor(request.status) }]}
+            style={[styles.actionButton, styles.completedButton, { backgroundColor: getStatusColor(request.foodRequest?.status) }]}
             disabled
           >
             <Text style={styles.completedButtonText}>
-              {request.status}
+              {request.foodRequest?.status || 'N/A'}
             </Text>
           </TouchableOpacity>
         </View>
       );
     }
 
-    // Show Accept/Reject buttons for pending requests
     return (
       <View style={styles.actionButtons}>
         <TouchableOpacity
@@ -312,13 +319,13 @@ const FoodRequestViewer = () => {
         
         <TouchableOpacity
           style={[styles.actionButton, styles.acceptButton]}
-          onPress={() => handleAccept(request.id)}
+          onPress={() => handleApprove(request.id)}
           disabled={updatingId === request.id}
         >
           {updatingId === request.id ? (
             <ActivityIndicator size="small" color="#ffffff" />
           ) : (
-            <Text style={styles.acceptButtonText}>Accept</Text>
+            <Text style={styles.acceptButtonText}>Approve</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -382,8 +389,8 @@ const FoodRequestViewer = () => {
                   </Text>
                   <Text style={styles.orgId}>ID: {request.organization?.id || 'N/A'}</Text>
                 </View>
-                <View style={[styles.statusBadge, { backgroundColor: getStatusColor(request.status) }]}>
-                  <Text style={styles.statusText}>{request.status || 'Unknown'}</Text>
+                <View style={[styles.statusBadge, { backgroundColor: getStatusColor(request.foodRequest?.status) }]}>
+                  <Text style={styles.statusText}>{request.foodRequest?.status || 'Pending'}</Text>
                 </View>
               </View>
 
@@ -411,9 +418,9 @@ const FoodRequestViewer = () => {
                     </Text>
                   </View>
                   <View style={styles.detailBox}>
-                    <Text style={styles.detailLabel}>Status</Text>
-                    <Text style={[styles.detailValue, { color: getStatusColor(request.status) }]} numberOfLines={1}>
-                      {request.status || 'N/A'}
+                    <Text style={styles.detailLabel}>Donor Status</Text>
+                    <Text style={[styles.detailValue, { color: getStatusColor(request.foodRequest?.status) }]} numberOfLines={1}>
+                      {request.foodRequest?.status || 'Pending'}
                     </Text>
                   </View>
                 </View>
@@ -434,38 +441,57 @@ const FoodRequestViewer = () => {
                 <View style={[styles.section, styles.borderTop]}>
                   <View style={styles.peopleRow}>
                     <Text style={styles.peopleLabel}>Requested By</Text>
-                    <Text style={styles.peopleValue} numberOfLines={1}>{request.requestedBy || 'N/A'}</Text>
+                    <Text style={styles.peopleValue} numberOfLines={1}>{request.organization?.requestedBy || 'N/A'}</Text>
                   </View>
-                  <View style={styles.peopleRow}>
-                    <Text style={styles.peopleLabel}>Donor</Text>
-                    <Text style={styles.peopleValue} numberOfLines={1}>{request.donor || 'N/A'}</Text>
-                  </View>
-                  {request.acceptedBy && (
-                    <View style={styles.peopleRow}>
-                      <Text style={styles.peopleLabel}>Accepted By</Text>
-                      <Text style={styles.peopleValue} numberOfLines={1}>{request.acceptedByVolunteer || 'N/A'}</Text>
-                    </View>
-                  )}
                 </View>
+
+                {/* Volunteer Details */}
+                {(request.VolunteerStatus || request.completedByVolunteer || request.VolunteerCompletedAt) && (
+                  <View style={[styles.section, styles.borderTop]}>
+                    <Text style={styles.sectionTitle}>Volunteer Information</Text>
+                    {request.VolunteerStatus && (
+                      <View style={styles.volunteerRow}>
+                        <Text style={styles.volunteerLabel}>Volunteer Status</Text>
+                        <View style={[styles.volunteerStatusBadge, { backgroundColor: getStatusColor(request.VolunteerStatus) }]}>
+                          <Text style={styles.volunteerStatusText}>{request.VolunteerStatus}</Text>
+                        </View>
+                      </View>
+                    )}
+                    {request.completedByVolunteer && (
+                      <View style={styles.volunteerRow}>
+                        <Text style={styles.volunteerLabel}>Completed By</Text>
+                        <Text style={styles.volunteerValue}>{request.completedByVolunteer}</Text>
+                      </View>
+                    )}
+                    {request.VolunteerCompletedAt && (
+                      <View style={styles.volunteerRow}>
+                        <Text style={styles.volunteerLabel}>Completed At</Text>
+                        <Text style={styles.volunteerValue}>{formatDate(request.VolunteerCompletedAt)}</Text>
+                      </View>
+                    )}
+                  </View>
+                )}
 
                 {/* Action Buttons */}
                 {renderActionButtons(request)}
 
                 {/* Timestamps */}
-                <View style={[styles.section, styles.borderTop]}>
-                  {request.acceptedAt && (
-                    <View style={styles.dateRow}>
-                      <Text style={styles.dateLabel}>Accepted At</Text>
-                      <Text style={styles.dateValue}>{formatDate(request.acceptedAt)}</Text>
-                    </View>
-                  )}
-                  {request.completedAt && (
-                    <View style={styles.dateRow}>
-                      <Text style={styles.dateLabel}>Completed At</Text>
-                      <Text style={styles.dateValue}>{formatDate(request.completedAt)}</Text>
-                    </View>
-                  )}
-                </View>
+                {(request.donorApprovedAt || request.donorRejectedAt) && (
+                  <View style={[styles.section, styles.borderTop]}>
+                    {request.donorApprovedAt && (
+                      <View style={styles.dateRow}>
+                        <Text style={styles.dateLabel}>Donor Approved At</Text>
+                        <Text style={styles.dateValue}>{formatDate(request.donorApprovedAt)}</Text>
+                      </View>
+                    )}
+                    {request.donorRejectedAt && (
+                      <View style={styles.dateRow}>
+                        <Text style={styles.dateLabel}>Donor Rejected At</Text>
+                        <Text style={styles.dateValue}>{formatDate(request.donorRejectedAt)}</Text>
+                      </View>
+                    )}
+                  </View>
+                )}
               </View>
             </View>
           ))}
@@ -623,84 +649,103 @@ const styles = StyleSheet.create({
   },
   itemName: {
     fontSize: 14,
-    fontWeight: '500',
     color: '#374151',
-    flex: 1,
-    marginRight: 8,
   },
   amountBadge: {
-    backgroundColor: '#e0e7ff',
-    paddingHorizontal: 12,
+    backgroundColor: '#dbeafe',
+    paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
   },
   amountText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#4338ca',
+    fontWeight: '500',
+    color: '#2563eb',
   },
   detailsRow: {
     flexDirection: 'row',
-    gap: 12,
+    justifyContent: 'space-between',
     marginBottom: 16,
   },
   detailBox: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    marginHorizontal: 4,
     padding: 12,
+    backgroundColor: '#f9fafb',
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
   },
   detailLabel: {
-    fontSize: 11,
-    color: '#78716c',
-    marginBottom: 4,
-  },
-  detailValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  dateRow: {
-    marginBottom: 12,
-  },
-  dateLabel: {
-    fontSize: 11,
+    fontSize: 12,
     color: '#6b7280',
     marginBottom: 4,
   },
-  dateValue: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#1f2937',
+  detailValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
   },
-  borderTop: {
-    borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
-    paddingTop: 16,
+  dateRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  dateLabel: {
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  dateValue: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#374151',
   },
   peopleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: 8,
   },
   peopleLabel: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#6b7280',
-    flex: 1,
   },
   peopleValue: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '500',
-    color: '#1f2937',
+    color: '#374151',
+  },
+  volunteerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingHorizontal: 8,
+  },
+  volunteerLabel: {
+    fontSize: 13,
+    color: '#6b7280',
+    fontWeight: '500',
+  },
+  volunteerValue: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
     flex: 1,
     textAlign: 'right',
+    marginLeft: 12,
+  },
+  volunteerStatusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  volunteerStatusText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '600',
   },
   actionButtons: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 16,
+    justifyContent: 'space-between',
+    marginTop: 12,
   },
   singleButton: {
     justifyContent: 'center',
@@ -709,42 +754,45 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     borderRadius: 8,
+    marginHorizontal: 4,
     alignItems: 'center',
-    justifyContent: 'center',
-  },
-  acceptButton: {
-    backgroundColor: '#10b981',
   },
   rejectButton: {
-    backgroundColor: '#ef4444',
+    backgroundColor: '#dc2626',
   },
-  completedButton: {
-    backgroundColor: '#6b7280',
-  },
-  acceptButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '600',
+  acceptButton: {
+    backgroundColor: '#3b82f6',
   },
   rejectButtonText: {
     color: '#ffffff',
-    fontSize: 14,
     fontWeight: '600',
+  },
+  acceptButtonText: {
+    color: '#ffffff',
+    fontWeight: '600',
+  },
+  completedButton: {
+    backgroundColor: '#10b981',
   },
   completedButtonText: {
     color: '#ffffff',
-    fontSize: 14,
     fontWeight: '600',
   },
+  borderTop: {
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+    paddingTop: 12,
+    marginTop: 8,
+  },
   retryButton: {
-    backgroundColor: '#4f46e5',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
     borderRadius: 8,
+    marginTop: 12,
   },
   retryButtonText: {
     color: '#ffffff',
-    fontSize: 14,
     fontWeight: '600',
   },
 });
