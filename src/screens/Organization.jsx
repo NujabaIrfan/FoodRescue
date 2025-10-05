@@ -13,9 +13,11 @@ import { useEffect, useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
+import { auth } from '../../firebaseConfig';
 import Toast from 'react-native-toast-message';
 
 const Organization = ({ route }) => {
+  const { currentUser } = auth
   const navigator = useNavigation();
   const [organizationData, setOrganizationData] = useState(null)
   const [isShowingFullDescription, setIsShowingFullDescription] = useState(false);
@@ -26,6 +28,9 @@ const Organization = ({ route }) => {
       <Text>What</Text>
     </View>
   )
+
+  const hasAdminRights = !!(currentUser && (organizationData?.orgDetails?.members || [])
+    .find(member => member.id === currentUser.uid && (member.role === "owner" || member.role === "manager")))
 
   useEffect(() => {
     (async () => {
@@ -42,6 +47,13 @@ const Organization = ({ route }) => {
           ...m.data()
         }))
 
+        // fetch events subcollection
+        const eventsSnap = await getDocs(collection(db, "Organizations", id, "events"))
+        const events = eventsSnap.docs.map(e => ({
+          id: e.id,
+          ...e.data()
+        }))
+
         setOrganizationData({
           name: data.name,
           description: data.description,
@@ -51,7 +63,7 @@ const Organization = ({ route }) => {
             memberCount: members.length,
             createdDate: data.createdDate
           },
-          events: []
+          events
         })
       } catch (err) {
         console.error(err)
@@ -91,6 +103,14 @@ const Organization = ({ route }) => {
           <TouchableOpacity style={styles.button} onPress={() => navigator.navigate("organizationVolunteers", { id })}>
             <Text style={styles.buttonText}>View members</Text>
           </TouchableOpacity>
+          {hasAdminRights && (
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() => navigator.navigate("organizationSettings", { id })}
+            >
+              <Text style={styles.buttonText}>View settings</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
       <Text
@@ -103,29 +123,34 @@ const Organization = ({ route }) => {
       </Text>
       <View style={styles.heading}>
         <Text style={styles.primaryHeading}>Events</Text>
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => navigator.navigate('createEvent')}
-        >
-          <Text style={styles.buttonText}>Manage events</Text>
-        </TouchableOpacity>
+        {hasAdminRights && (
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() => navigator.navigate('organizationEvents', { id })}
+          >
+            <Text style={styles.buttonText}>Manage events</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {organizationData.events.map((event, index) => (
         <OrganizationEvent
           key={index}
           image={event.image}
-          eventName={event.eventName}
-          datetime={new Date(event.datetime)}
+          name={event.name}
+          description={event.description}
+          eventDateTime={event.eventDateTime === 0 ? 0 : new Date(event.eventDateTime.toDate())}
           venue={event.venue}
         />
       ))}
 
       <View style={styles.heading}>
         <Text style={styles.primaryHeading}>Requests</Text>
-        <TouchableOpacity style={styles.button}>
-          <Text style={styles.buttonText}>Manage requests</Text>
-        </TouchableOpacity>
+        {hasAdminRights && (
+          <TouchableOpacity style={styles.button}>
+            <Text style={styles.buttonText}>Manage requests</Text>
+          </TouchableOpacity>
+        )}
       </View>
       <DonationRequest />
       <DonationRequest />

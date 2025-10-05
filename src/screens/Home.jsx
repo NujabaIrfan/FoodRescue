@@ -20,6 +20,7 @@ export default function Home() {
   ];
 
   return (
+    <View style={{ flex: 1 }}>
     <ScrollView style={styles.container}>
       {/* Hero Section */}
       <View style={styles.hero}>
@@ -178,8 +179,7 @@ export default function Home() {
           </View>
         </TouchableOpacity>
 
-
-          {/* temporary */}
+        {/* temporary */}
         <TouchableOpacity
           style={[styles.serviceCard, styles.primaryService]}
           onPress={() => navigator.navigate('foodRequestMgtNav')}
@@ -188,7 +188,7 @@ export default function Home() {
             <View style={styles.serviceInfo}>
               <Text style={styles.serviceTitle}>Food Requests</Text>
               <Text style={styles.serviceDescription}>
-                Create and access Food Requests here 
+                Create and access Food Requests here
               </Text>
             </View>
             <View style={styles.serviceArrow}>
@@ -232,7 +232,17 @@ export default function Home() {
           </View>
         </View>
       </View>
+
+      
     </ScrollView>
+    {/* chatbot - floatinng button */}
+      <TouchableOpacity
+        style={styles.floatingButton}
+        onPress={() => navigator.navigate('chatbotScreen')}
+      >
+        <Text style={styles.floatingButtonText}>💬</Text>
+      </TouchableOpacity>
+    </View>
   );
 }
 
@@ -459,4 +469,24 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '500',
   },
+  floatingButton: {
+  position: 'absolute',
+  bottom: 20,
+  right: 20,
+  width: 60,
+  height: 60,
+  borderRadius: 30,
+  backgroundColor: '#3b82f6',
+  justifyContent: 'center',
+  alignItems: 'center',
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.3,
+  shadowRadius: 4,
+  elevation: 8,
+},
+floatingButtonText: {
+  fontSize: 28,
+  color: '#ffffff',
+},
 });

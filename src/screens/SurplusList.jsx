@@ -1,18 +1,35 @@
 // screens/SurplusList.js
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator } from 'react-native';
-import { useRoute } from '@react-navigation/native';
+import { useRoute, useNavigation } from '@react-navigation/native';
 import { db } from '../../firebaseConfig';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import SurplusItemCard from '../components/SurplusItemCard';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 const SurplusList = () => {
+    const navigation = useNavigation(); 
     const route = useRoute();
     const { providerId, providerName } = route.params || {};
     const [surplusItems, setSurplusItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+
+    useEffect(() => {
+        navigation.setOptions({
+            title: 'Surplus List',
+            headerStyle: {
+                backgroundColor: '#389c9a',
+                elevation: 0, // Android shadow
+                shadowOpacity: 0, // iOS shadow
+            },
+            headerTintColor: '#fff', // back arrow / text color
+            headerTitleStyle: {
+                fontWeight: 'bold',
+                fontSize: 20,
+            },
+        });
+    }, [navigation]);
 
     useEffect(() => {
         const fetchSurplusItems = async () => {
@@ -27,10 +44,16 @@ const SurplusList = () => {
                     where('providerId', '==', providerId)
                 );
                 const querySnapshot = await getDocs(q);
-                const items = querySnapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data(),
-                }));
+                const items = querySnapshot.docs
+                    .map(doc => ({
+                        id: doc.id,
+                        ...doc.data(),
+                    }))
+                    // Filter out items with quantity zero or less
+                    .filter(item => item.quantity > 0)
+                    // Also filter out items with status 'unavailable' if that field exists
+                    .filter(item => item.status !== 'unavailable');
+                
                 setSurplusItems(items);
             } catch (err) {
                 console.error("Error fetching surplus items: ", err);
@@ -88,29 +111,29 @@ const SurplusList = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#389c9a',
+        backgroundColor: '#f8dd8c', // light soft background
         paddingTop: 20,
     },
     centeredContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#f8f9fa',
+        backgroundColor: '#F9FAFB', // subtle neutral background
     },
     headerTitle: {
-        fontSize: 28,
+        fontSize: 26,
         fontWeight: 'bold',
-        color: '#2c3e50',
+        color: '#1E293B', // dark navy
         paddingHorizontal: 20,
     },
     headerSubtitle: {
         fontSize: 16,
-        color: '#7f8c8d',
+        color: '#070c14ff', // cool gray
         marginBottom: 20,
         paddingHorizontal: 20,
     },
     listContainer: {
-        paddingHorizontal: 10,
+        paddingHorizontal: 12,
         paddingBottom: 20,
     },
     emptyListContainer: {
@@ -126,21 +149,21 @@ const styles = StyleSheet.create({
     },
     emptyText: {
         fontSize: 16,
-        color: '#95a5a6',
+        color: '#64748B', // softer gray for empty message
         textAlign: 'center',
         marginTop: 10,
     },
     loadingText: {
         marginTop: 10,
         fontSize: 16,
-        color: '#4a90e2',
+        color: '#2563EB', // clean blue for loading
     },
     errorText: {
-        color: '#e74c3c',
+        color: '#DC2626', // modern red
         fontSize: 16,
         textAlign: 'center',
         marginTop: 10,
-        fontWeight: '500',
+        fontWeight: '600',
     },
 });
 

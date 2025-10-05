@@ -44,7 +44,7 @@ const OrganizationCard = ({ name, image, joinedDetails, orgDetails, id }) => {
                 <Text style={styles.infoText}>{joinedDetails.position}</Text>
                 <Text style={styles.infoText}>
                   Joined on{' '}
-                  {new Date(joinedDetails.joinedDate).toLocaleDateString()}
+                  {joinedDetails.joinedDate.toLocaleDateString()}
                 </Text>
               </View>
             ) : (

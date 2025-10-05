@@ -84,6 +84,8 @@ const DonorProfile = () => {
           <Text style={styles.headerButtonText}>Surplus</Text>
         </TouchableOpacity>
       ),
+       headerLeft: () => null, 
+      headerBackVisible: false,        
     });
 
     fetchUserData();
@@ -943,23 +945,24 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     gap: 10,
   },
-  button: {
-    flex: 1,
-    paddingVertical: 16,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#389c9a',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 8,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
+button: {
+  flex: 1,
+  paddingVertical: 12,   // smaller height
+  borderRadius: 8,       // less rounded
+  alignItems: 'center',
+  justifyContent: 'center',
+  shadowColor: '#389c9a',
+  shadowOffset: { width: 0, height: 2 }, // lighter shadow
+  shadowOpacity: 0.2,
+  shadowRadius: 3,
+  elevation: 4,          // reduced shadow on Android
+},
+buttonText: {
+  color: '#fff',
+  fontSize: 16,          // smaller text
+  fontWeight: '600',
+},
+
   editButton: {
     backgroundColor: '#389c9a',
   },

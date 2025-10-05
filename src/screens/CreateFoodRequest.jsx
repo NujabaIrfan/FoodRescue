@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
 import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from 'react-native-ui-datepicker';
 import { auth, db } from '../../firebaseConfig';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, where, getDocs, query } from 'firebase/firestore';
 import { Timestamp } from 'firebase/firestore';
 import { useNavigation } from '@react-navigation/native';
 
@@ -28,6 +28,7 @@ const CreateFoodRequest = ({ route }) => {
       amount: '1',
     },
   ]);
+  const [maxQuantity, setMaxQuantity] = useState(null);
   const [requiredBefore, setRequiredBefore] = useState(new Date());
   const [priority, setPriority] = useState('Medium');
   const [pickupDate, setPickupDate] = useState(new Date());
@@ -36,6 +37,31 @@ const CreateFoodRequest = ({ route }) => {
   const [showRequiredDate, setShowRequiredDate] = useState(false);
   const [showPickupDate, setShowPickupDate] = useState(false);
   const [showPickupTime, setShowPickupTime] = useState(false);
+
+  useEffect(()=>{
+    const fetchSurplusItem = async () => {
+      if(!passedItem) return;
+
+      try{
+        const q=query(
+          collection(db, 'surplusItems'),
+          where('name', '==', passedItem),
+          where('status', '==', 'available')
+        );
+
+        const querySnapshot = await getDocs(q);
+
+        if(!querySnapshot.empty){
+          const itemData = querySnapshot.docs[0].data();
+          setMaxQuantity(itemData.quantity);
+        }
+      } catch (error){
+        console.error('Error fetching surplus item: ', error);
+      }
+    };
+
+    fetchSurplusItem();
+  }, [passedItem]);
 
   const addFoodItem = () => {
     setFoodItems([...foodItems, { item: '', amount: '1' }]);
@@ -176,10 +202,19 @@ const CreateFoodRequest = ({ route }) => {
                   </TouchableOpacity>
                   <Text style={styles.amountValue}>{item.amount}</Text>
                   <TouchableOpacity
-                    style={styles.counterButton}
-                    onPress={() =>
-                      updateFoodItem(index, 'amount', parseInt(item.amount) + 1)
-                    }
+                    style={[
+    styles.counterButton,
+    maxQuantity && parseInt(item.amount) >= maxQuantity && styles.disabledButton
+  ]}
+                    onPress={() => {
+    const newAmount = parseInt(item.amount) + 1;
+    if (!maxQuantity || newAmount <= maxQuantity) {
+      updateFoodItem(index, 'amount', newAmount);
+    } else {
+      Alert.alert('Limit Reached', `Maximum available: ${maxQuantity}`);
+    }
+  }}
+  disabled={maxQuantity && parseInt(item.amount) >= maxQuantity}
                   >
                     <Text style={styles.counterText}>+</Text>
                   </TouchableOpacity>
@@ -390,6 +425,10 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "500",
   },
+  disabledButton: {
+  backgroundColor: '#cccccc',
+  opacity: 0.5,
+},
 });
 
 export default CreateFoodRequest;
