@@ -10,12 +10,13 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { auth, db } from '../../firebaseConfig';
-import { collection, getDocs, orderBy, query } from "firebase/firestore";
+import { collection, getDocs, orderBy, query, where } from "firebase/firestore";
 import FoodRequestCard from "../components/FoodRequestCard";
 import { useNavigation } from "@react-navigation/native";
 
-const FoodRequestListScreen = () => {
-    const navigation = useNavigation();
+const FoodRequestListScreen = ({ route }) => {
+  const { id } = route?.params || {}
+  const navigation = useNavigation();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -27,7 +28,9 @@ const FoodRequestListScreen = () => {
 
   const fetchRequests = async () => {
     try {
-      const q=query(collection(db,"foodRequests"));
+      const q = id
+        ? query(collection(db, "foodRequests"), where("organization.id", "==", id))
+        : query(collection(db,"foodRequests"));
       const querySnapshot=await getDocs(q);
 
       const requestData = [];
