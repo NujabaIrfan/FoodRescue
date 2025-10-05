@@ -1,6 +1,7 @@
 import { StyleSheet } from 'react-native';
 import { createStaticNavigation } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import CreateOrganization from './src/screens/CreateOrganization';
 import Home from './src/screens/Home';
 import Signup from './src/screens/Signup';
@@ -29,10 +30,55 @@ import OrganizationVolunteers from './src/screens/OrganizationVolunteers';
 import OrganizationEvents from './src/screens/OrganizationEvents';
 import VolunteerForgotPassword from './src/screens/VolunteerForgotPassword';
 import DonorFoodRequest from './src/screens/DonorFoodRequest';
+import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
+import FontAwesome from 'react-native-vector-icons/FontAwesome6';
+
+
+const Tab = createBottomTabNavigator()
+
+function BottomTabs() {
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarIcon: ({ color, size }) => {
+          if (route.name === 'Home') {
+            return <MaterialIcon name="home" size={32} color={color} />;
+          } else if (route.name === 'NGO') {
+            return <MaterialIcon name="apartment" size={32} color={color} />;
+          } else if (route.name === 'Donors') {
+            return <MaterialIcon name="food-bank" size={32} color={color} />
+          } else if (route.name === 'Volunteer') {
+            return <MaterialIcon name="volunteer-activism" size={32} color={color} />
+          }
+        },
+        tabBarActiveTintColor: '#389C9A',
+        tabBarInactiveTintColor: 'gray',
+        tabBarLabelStyle: {
+          fontSize: 14,
+          marginBottom: 4,
+        },
+        tabBarStyle: {
+          height: 70,
+          paddingTop: 6,
+        },
+        animation: 'shift',
+
+      })}
+    >
+      <Tab.Screen name="Home" component={Home} />
+      <Tab.Screen name="NGO" component={Organizations} />
+      <Tab.Screen name="Donors" component={RestaurantList} />
+      <Tab.Screen name="Volunteer" component={VolunteerSection} />
+    </Tab.Navigator>
+  );
+}
+
 
 const RootStack = createNativeStackNavigator({
-  initialRouteName: 'home',
+  initialRouteName: 'tabs',
   screens: {
+    tabs: BottomTabs,
     home: Home,
     createOrganization: CreateOrganization,
     signup: Signup,
@@ -44,18 +90,18 @@ const RootStack = createNativeStackNavigator({
     donorSignIn: DonorSignIn,
     forgotPassword: ForgotPassword,
     donorProfile: DonorProfile,
-    volunteerSignUp : VolunteerSignUp,
-    volunteerLogin : VolunteerLogin,
-    volunteerSection : VolunteerSection,
-    volunteerProfile : VolunteerProfile,
+    volunteerSignUp: VolunteerSignUp,
+    volunteerLogin: VolunteerLogin,
+    volunteerSection: VolunteerSection,
+    volunteerProfile: VolunteerProfile,
     createFoodRequest: CreateFoodRequest,
-    foodRequestMgtNav:FoodRequestMgtNav,
-    displayFoodRequest:DisplayFoodRequest,
-    displayRequestAdminInterface:DisplayRequestAdminInterface,
-    foodRequestListScreen:FoodRequestListScreen,
+    foodRequestMgtNav: FoodRequestMgtNav,
+    displayFoodRequest: DisplayFoodRequest,
+    displayRequestAdminInterface: DisplayRequestAdminInterface,
+    foodRequestListScreen: FoodRequestListScreen,
     chatbotScreen: ChatbotScreen,
-    surplus:Surplus,
-    surplusList:SurplusList,
+    surplus: Surplus,
+    surplusList: SurplusList,
     organizationVolunteers: OrganizationVolunteers,
     organizationEvents: OrganizationEvents,
     volunteerForgotPassword: VolunteerForgotPassword,
