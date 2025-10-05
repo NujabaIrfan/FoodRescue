@@ -10,15 +10,30 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { auth, db } from '../../firebaseConfig';
-import { deleteDoc, doc, getDoc, updateDoc } from 'firebase/firestore';
+import {
+  deleteDoc,
+  doc,
+  getDoc,
+  Timestamp,
+  updateDoc,
+} from 'firebase/firestore';
 import { useNavigation } from '@react-navigation/native';
+import { Picker } from '@react-native-picker/picker';
+import DateTimePicker from 'react-native-ui-datepicker';
 
 const DisplayFoodRequest = ({ route }) => {
   const { requestId } = route.params;
-  const navigation=useNavigation();
+  const navigation = useNavigation();
   const [requestData, setRequestData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [notFound, setNotFound] = useState(false);
+
+  // for update feature
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedData, setEditedData] = useState(null);
+  const [showEditRequiredDate, setShowEditRequiredDate] = useState(false);
+  const [showEditPickupDate, setShowEditPickupDate] = useState(false);
+  const [showEditPickupTime, setShowEditPickupTime] = useState(false);
 
   useEffect(() => {
     const fetchRequestData = async () => {
@@ -151,22 +166,23 @@ const DisplayFoodRequest = ({ route }) => {
   };
 
   const deleteFoodRequest = async (requestId) => {
-    Alert.alert('Confirm Delete',
+    Alert.alert(
+      'Confirm Delete',
       'Are you sure you want to delete the request',
       [
         {
           text: 'Cancel',
           style: 'cancel',
-        }, 
+        },
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: async()=>{
-            try{
+          onPress: async () => {
+            try {
               await deleteDoc(doc(db, 'foodRequests', requestId));
-              Alert.alert('Success', "Your request has been deleted");
+              Alert.alert('Success', 'Your request has been deleted');
               navigation.goBack();
-            } catch (error){
+            } catch (error) {
               console.error('Error deleting request: ', error);
               Alert.alert('Error', 'Failed to delete request');
             }
@@ -174,6 +190,58 @@ const DisplayFoodRequest = ({ route }) => {
         },
       ]
     );
+  };
+
+  // edit & update
+  const handleEditMode = () => {
+    setIsEditing(true);
+    setEditData({
+      items: requestData.foodRequest.items,
+      requiredBefore: requestData.foodRequest.requiredBefore.toDate
+        ? requestData.foodRequest.requiredBefore.toDate()
+        : new Date(requestData.foodRequest.requiredBefore),
+      priority: requestData.foodRequest.priority,
+      pickupDate: requestData.foodRequest.pickupDate.toDate
+        ? requestData.foodRequest.pickupDate.toDate()
+        : new Date(requestData.foodRequest.pickupDate),
+      pickupTime: requestData.foodRequest.pickupTime.toDate
+        ? requestData.foodRequest.pickupTime.toDate()
+        : new Date(requestData.foodRequest.pickupTime),
+    });
+  };
+
+  const handleUpdateRequest = async () => {
+    try {
+      const docRef = doc(db, 'foodRequests', requestData.id);
+      await updateDoc(docRef, {
+        'foodRequest.items': editedData.items,
+        'foodRequest.requiredBefore': Timestamp.formatDate(
+          editedData.requiredBefore
+        ),
+        'foodRequest.priority': editedData.priority,
+        'foodRequest.pickupDate': Timestamp.fromDate(editedData.pickupDate),
+        'foodRequest.pickupTime': Timestamp.fromDate(editedData.pickupTime),
+      });
+
+      Alert.alert('Success', 'Request updated successfully');
+
+      setRequestData((prev) => ({
+        ...prev,
+        foodRequest: {
+          ...prev.foodRequest,
+          items: editedData.items,
+          requiredBefore: Timestamp.fromDate(editedData.requiredBefore),
+          priority: editedData.priority,
+          pickupDate: Timestamp.fromDate(editedData.pickupDate),
+          pickupTime: Timestamp.fromDate(editedData.pickupTime),
+        },
+      }));
+
+      setIsEditing(false);
+    } catch (error) {
+      console.log('Error updating request', error);
+      Alert.alert('Error', 'Failed to update request');
+    }
   };
 
   return (
@@ -261,7 +329,7 @@ const DisplayFoodRequest = ({ route }) => {
                 </View>
               </View>
 
-              {/* food details */}
+              {/* food details integrated with edit fucntion*/}
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Food Details</Text>
 
@@ -272,16 +340,64 @@ const DisplayFoodRequest = ({ route }) => {
                   </Text>
                 </View>
 
+                {/* food item + edit */}
                 <View style={styles.foodItemsContainer}>
                   <Text style={styles.label}>Food Item(s)</Text>
-                  {requestData.foodRequest?.items?.map((item, index) => (
-                    <View key={index} style={styles.foodItem}>
-                      <Text style={styles.foodItemName}>{item.item}</Text>
-                      <Text style={styles.foodItemAmount}>{item.amount}</Text>
-                    </View>
-                  ))}
+
+                  {isEditing
+                    ? editedData.items.map((item, index) => (
+                        <View key={index} style={styles.foodItem}>
+                          <Text style={styles.foodItemName}>{item.item}</Text>
+                          <View style={styles.counterContainer}>
+                            <TouchableOpacity
+                              style={styles.counterButton}
+                              onPress={() => {
+                                const newItems = [...editedData.items];
+                                newItems[index].amount = Math.max(
+                                  1,
+                                  parseInt(item.amount) - 1
+                                ).toString();
+                                setEditedData({
+                                  ...editedData,
+                                  items: newItems,
+                                });
+                              }}
+                            >
+                              <Text style={styles.counterText}>-</Text>
+                            </TouchableOpacity>
+                            <Text style={styles.amountValue}>
+                              {item.amount}
+                            </Text>
+
+                            <TouchableOpacity
+                              style={styles.counterButton}
+                              onPress={() => {
+                                const newItems = [...editedData.items];
+                                newItems[index].amount = (
+                                  parseInt(item.amount) + 1
+                                ).toString();
+                                setEditedData({
+                                  ...editedData,
+                                  items: newItems,
+                                });
+                              }}
+                            >
+                              <Text style={styles.counterText}>+</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      ))
+                    : requestData.foodRequest?.items?.map((item, index) => (
+                        <View key={index} style={styles.foodItem}>
+                          <Text style={styles.foodItemName}>{item.item}</Text>
+                          <Text style={styles.foodItemAmount}>
+                            {item.amount}
+                          </Text>
+                        </View>
+                      ))}
                 </View>
 
+                      {/* here to edit next */}
                 <View style={styles.detailRow}>
                   <Text style={styles.label}>Required before:</Text>
                   <Text style={styles.value}>
@@ -359,9 +475,11 @@ const DisplayFoodRequest = ({ route }) => {
                 {requestData.foodRequest?.status === 'Pending' && (
                   <TouchableOpacity
                     style={styles.deleteButton}
-                    onPress={()=>deleteFoodRequest(requestData.id)}
+                    onPress={() => deleteFoodRequest(requestData.id)}
                   >
-                    <Text style={styles.deleteButtonText}>Withdraw Request</Text>
+                    <Text style={styles.deleteButtonText}>
+                      Withdraw Request
+                    </Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -587,18 +705,18 @@ const styles = StyleSheet.create({
   },
 
   deleteButton: {
-  backgroundColor: '#dc3545',
-  paddingVertical: 12,
-  paddingHorizontal: 25,
-  borderRadius: 4,
-  flex: 1,
-  alignItems: 'center',
-},
-deleteButtonText: {
-  color: 'white',
-  fontSize: 16,
-  fontWeight: 'bold',
-},
+    backgroundColor: '#dc3545',
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    borderRadius: 4,
+    flex: 1,
+    alignItems: 'center',
+  },
+  deleteButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 });
 
 export default DisplayFoodRequest;
