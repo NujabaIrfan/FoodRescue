@@ -302,7 +302,7 @@ export default function VolunteerProfile() {
             VolunteerStatus: "Completed",
             VolunteerCompletedAt: new Date().toISOString(),
             VolunteerCompletedBy: user.uid,
-            completedByVolunteer: user.displayName || "Volunteer",
+            completedByVolunteer: user.name || "Volunteer",
             "foodRequest.volunteerAccepted": "false"
           });
         }
@@ -315,7 +315,6 @@ export default function VolunteerProfile() {
             completedAt: new Date().toISOString(),
             status: "Completed",
             completionPhotos: []
-            // NO completionPhotos field here - it will be added later when photos are uploaded
           }
         ];
         
