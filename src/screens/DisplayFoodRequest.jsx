@@ -195,7 +195,7 @@ const DisplayFoodRequest = ({ route }) => {
   // edit & update
   const handleEditMode = () => {
     setIsEditing(true);
-    setEditData({
+    setEditedData({
       items: requestData.foodRequest.items,
       requiredBefore: requestData.foodRequest.requiredBefore.toDate
         ? requestData.foodRequest.requiredBefore.toDate()
@@ -215,7 +215,7 @@ const DisplayFoodRequest = ({ route }) => {
       const docRef = doc(db, 'foodRequests', requestData.id);
       await updateDoc(docRef, {
         'foodRequest.items': editedData.items,
-        'foodRequest.requiredBefore': Timestamp.formatDate(
+        'foodRequest.requiredBefore': Timestamp.fromDate(
           editedData.requiredBefore
         ),
         'foodRequest.priority': editedData.priority,
@@ -397,28 +397,58 @@ const DisplayFoodRequest = ({ route }) => {
                       ))}
                 </View>
 
-                      {/* here to edit next */}
+                {/* required before + edit */}
                 <View style={styles.detailRow}>
                   <Text style={styles.label}>Required before:</Text>
-                  <Text style={styles.value}>
-                    {formatDate(requestData.foodRequest?.requiredBefore)}
-                  </Text>
+                  {isEditing ? (
+                    <TouchableOpacity
+                      style={styles.editDateButton}
+                      onPress={() => setShowEditRequiredDate(true)}
+                    >
+                      <Text style={styles.value}>
+                        {formatDate(editedData.requiredBefore)}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <Text style={styles.value}>
+                      {formatDate(requestData.foodRequest?.requiredBefore)}
+                    </Text>
+                  )}
                 </View>
 
+                {/* priority + edit */}
                 <View style={styles.detailRow}>
                   <Text style={styles.label}>Priority:</Text>
-                  <Text
-                    style={[
-                      styles.value,
-                      styles.priorityText,
-                      requestData.foodRequest?.priority === 'High' &&
-                        styles.highPriority,
-                      requestData.foodRequest?.priority === 'Urgent' &&
-                        styles.urgentPriority,
-                    ]}
-                  >
-                    {requestData.foodRequest?.priority || 'Medium'}
-                  </Text>
+
+                  {isEditing ? (
+                    <View style={styles.pickerWrapper}>
+                      <Picker
+                        selectedValue={editedData.priority}
+                        onValueChange={(value) =>
+                          setEditedData({ ...editedData, priority: value })
+                        }
+                        style={styles.editPicker}
+                      >
+                        <Picker.Item label="Low" value="Low" />
+                        <Picker.Item label="Medium" value="Medium" />
+                        <Picker.Item label="High" value="High" />
+                        <Picker.Item label="Urgent" value="Urgent" />
+                      </Picker>
+                    </View>
+                  ) : (
+                    <Text
+                      style={[
+                        styles.value,
+                        styles.priorityText,
+                        requestData.foodRequest?.priority === 'High' &&
+                          styles.highPriority,
+                        requestData.foodRequest?.priority === 'Urgent' &&
+                          styles.urgentPriority,
+                      ]}
+                    >
+                      {requestData.foodRequest?.priority || 'Medium'}
+                    </Text>
+                  )}
                 </View>
               </View>
 
@@ -428,20 +458,73 @@ const DisplayFoodRequest = ({ route }) => {
 
                 <View style={styles.detailRow}>
                   <Text style={styles.label}>Available date:</Text>
-                  <Text style={styles.value}>
-                    {formatDate(requestData.foodRequest?.pickupDate)}
-                  </Text>
+                  {isEditing ? (
+                    <TouchableOpacity
+                      style={styles.editDateButton}
+                      onPress={() => setShowEditPickupDate(true)}
+                    >
+                      <Text style={styles.value}>
+                        {formatDate(editedData.pickupDate)}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <Text style={styles.value}>
+                      {formatDate(requestData.foodRequest?.pickupDate)}
+                    </Text>
+                  )}
                 </View>
 
                 <View style={styles.detailRow}>
                   <Text style={styles.label}>Available time:</Text>
-                  <Text style={styles.value}>
-                    {formatTime(requestData.foodRequest?.pickupTime)}
-                  </Text>
+                  {isEditing ? (
+                    <TouchableOpacity
+                      style={styles.editDateButton}
+                      onPress={() => setShowEditPickupTime(true)}
+                    >
+                      <Text style={styles.value}>
+                        {formatTime(editedData.pickupTime)}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <Text style={styles.value}>
+                      {formatTime(requestData.foodRequest?.pickupTime)}
+                    </Text>
+                  )}
                 </View>
               </View>
 
+              {/* button container */}
               <View style={styles.buttonContainer}>
+                {/* edit button */}
+                {requestData.foodRequest?.status === 'Pending' &&
+                  !isEditing && (
+                    <TouchableOpacity
+                      style={styles.searchButton}
+                      onPress={handleEditMode}
+                    >
+                      <Text style={styles.searchButtonText}>Edit Request</Text>
+                    </TouchableOpacity>
+                  )}
+
+                {isEditing && (
+                  <>
+                    <TouchableOpacity
+                      style={styles.searchButton}
+                      onPress={handleUpdateRequest}
+                    >
+                      <Text style={styles.searchButtonText}>Save Changes</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.clearButton}
+                      onPress={() => setIsEditing(false)}
+                    >
+                      <Text style={styles.clearButton}>Cancel</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+
+                {/* assign button for volunteer */}
                 {requestData.foodRequest?.status === 'Approved' && (
                   <TouchableOpacity
                     style={[
@@ -481,6 +564,57 @@ const DisplayFoodRequest = ({ route }) => {
                       Withdraw Request
                     </Text>
                   </TouchableOpacity>
+                )}
+
+                {showEditPickupDate && (
+                  <DateTimePicker
+                    value={editedData.requiredBefore}
+                    mode="date"
+                    display="default"
+                    onChange={(event, selectedDate) => {
+                      setShowEditRequiredDate(false);
+                      if (selectedDate) {
+                        setEditedData({
+                          ...editedData,
+                          requiredBefore: selectedDate,
+                        });
+                      }
+                    }}
+                  />
+                )}
+
+                {showEditPickupDate && (
+                  <DateTimePicker
+                    value={editedData.pickupDate}
+                    mode="date"
+                    display="default"
+                    onChange={(event, selectedDate) => {
+                      setShowEditPickupDate(false);
+                      if (selectedDate) {
+                        setEditedData({
+                          ...editedData,
+                          pickupDate: selectedDate,
+                        });
+                      }
+                    }}
+                  />
+                )}
+
+                {showEditPickupTime && (
+                  <DateTimePicker
+                    value={editedData.pickupTime}
+                    mode="time"
+                    display="default"
+                    onChange={(event, selectedTime) => {
+                      setShowEditPickupTime(false);
+                      if (selectedTime) {
+                        setEditedData({
+                          ...editedData,
+                          pickupTime: selectedTime,
+                        });
+                      }
+                    }}
+                  />
                 )}
               </View>
             </View>
@@ -717,6 +851,39 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+  editDateButton: {
+  flex: 1,
+},
+pickerWrapper: {
+  flex: 1,
+  borderWidth: 1,
+  borderColor: '#ddd',
+  borderRadius: 4,
+},
+editPicker: {
+  height: 40,
+},
+counterContainer: {
+  flexDirection: 'row',
+  alignItems: 'center',
+},
+counterButton: {
+  width: 30,
+  height: 30,
+  borderRadius: 4,
+  backgroundColor: '#e0e0e0',
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+counterText: {
+  fontSize: 16,
+  fontWeight: 'bold',
+},
+amountValue: {
+  marginHorizontal: 15,
+  fontSize: 14,
+  fontWeight: '500',
+},
 });
 
 export default DisplayFoodRequest;
