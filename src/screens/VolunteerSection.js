@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Image, Text, TouchableOpacity, StyleSheet, Animated, TouchableWithoutFeedback, FlatList, Dimensions } from 'react-native';
+import { View, Image, Text, TouchableOpacity, StyleSheet, Animated, TouchableWithoutFeedback, FlatList, Dimensions, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { auth, db } from '../../firebaseConfig';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
@@ -7,7 +7,7 @@ import { doc, getDoc, collection, getDocs } from 'firebase/firestore';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { Modal } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ScrollView } from 'react-native-web';
+
 
 const { width } = Dimensions.get('window');
 

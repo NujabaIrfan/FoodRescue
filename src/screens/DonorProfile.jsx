@@ -282,7 +282,7 @@ const DonorProfile = () => {
   const handleSignOut = async () => {
     try {
       await signOut(auth);
-      navigation.navigate('restaurantList');
+      navigation.navigate('tabs', { screen: 'Donors' })
       showToast('success', 'Signed Out', 'You have been successfully signed out');
     } catch (error) {
       console.error('Error signing out:', error);
@@ -320,7 +320,7 @@ const DonorProfile = () => {
       showToast('success', 'Account Deleted', 'Your account has been permanently deleted');
       
       // Navigate away from the profile screen
-      navigation.navigate('restaurantList');
+      navigation.navigate('tabs', { screen: 'Donors' })
       
     } catch (error) {
       console.error('Error deleting account:', error);
