@@ -49,6 +49,10 @@ export default function FoodChatBot() {
     try {
       let foodData = await getFoodItems({ status: 'available' });
 
+      console.log('Food data fetched:', foodData);
+    console.log('Number of items:', foodData.length);
+    console.log('First item:', foodData[0]);
+
       const searchTerms = inputText.toLowerCase();
       if (
         searchTerms.includes('show') ||
