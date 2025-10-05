@@ -298,7 +298,9 @@ const DisplayFoodRequest = ({ route }) => {
               </View>
 
               <View style={styles.buttonContainer}>
-  <TouchableOpacity 
+
+ {requestData.foodRequest?.status === "Approved" && (
+    <TouchableOpacity 
     style={[
       styles.searchButton,
       requestData.foodRequest?.volunteerAccepted === "true" && styles.disabledButton
@@ -308,6 +310,8 @@ const DisplayFoodRequest = ({ route }) => {
   >
     <Text style={styles.searchButtonText}>Assign Request to yourself</Text>
   </TouchableOpacity>
+ )}
+  
 
   {requestData.foodRequest?.volunteerAccepted === "true" && (
     <TouchableOpacity 
