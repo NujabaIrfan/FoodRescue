@@ -57,11 +57,10 @@ export default function VolunteerSection() {
           const userDocSnap = await getDoc(userDocRef);
           if (userDocSnap.exists()) {
             const data = userDocSnap.data();
-            setUserPhoto(data.profilePhoto || 'https://via.placeholder.com/40');
+            setUserPhoto(data.profilePhoto);
           } 
         } catch (err) {
           console.log('Error fetching profile photo:', err);
-          setUserPhoto('https://via.placeholder.com/40');
         }
       } else {
         setUserPhoto(null);
