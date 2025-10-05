@@ -10,10 +10,12 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { auth, db } from '../../firebaseConfig';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { deleteDoc, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { useNavigation } from '@react-navigation/native';
 
 const DisplayFoodRequest = ({ route }) => {
   const { requestId } = route.params;
+  const navigation=useNavigation();
   const [requestData, setRequestData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [notFound, setNotFound] = useState(false);
@@ -146,6 +148,32 @@ const DisplayFoodRequest = ({ route }) => {
     setReqestId('');
     setRequestData(null);
     setNotFound(false);
+  };
+
+  const deleteFoodRequest = async (requestId) => {
+    Alert.alert('Confirm Delete',
+      'Are you sure you want to delete the request',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        }, 
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async()=>{
+            try{
+              await deleteDoc(doc(db, 'foodRequests', requestId));
+              Alert.alert('Success', "Your request has been deleted");
+              navigation.goBack();
+            } catch (error){
+              console.error('Error deleting request: ', error);
+              Alert.alert('Error', 'Failed to delete request');
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -298,30 +326,45 @@ const DisplayFoodRequest = ({ route }) => {
               </View>
 
               <View style={styles.buttonContainer}>
+                {requestData.foodRequest?.status === 'Approved' && (
+                  <TouchableOpacity
+                    style={[
+                      styles.searchButton,
+                      requestData.foodRequest?.volunteerAccepted === 'true' &&
+                        styles.disabledButton,
+                    ]}
+                    onPress={() => volunteerAcceptFoodRequest(requestData.id)}
+                    disabled={
+                      requestData.foodRequest?.volunteerAccepted === 'true'
+                    }
+                  >
+                    <Text style={styles.searchButtonText}>
+                      Assign Request to yourself
+                    </Text>
+                  </TouchableOpacity>
+                )}
 
- {requestData.foodRequest?.status === "Approved" && (
-    <TouchableOpacity 
-    style={[
-      styles.searchButton,
-      requestData.foodRequest?.volunteerAccepted === "true" && styles.disabledButton
-    ]}
-    onPress={() => volunteerAcceptFoodRequest(requestData.id)}
-    disabled={requestData.foodRequest?.volunteerAccepted === "true"}
-  >
-    <Text style={styles.searchButtonText}>Assign Request to yourself</Text>
-  </TouchableOpacity>
- )}
-  
+                {requestData.foodRequest?.volunteerAccepted === 'true' && (
+                  <TouchableOpacity
+                    style={styles.clearButton}
+                    onPress={() => cancelVolunteerAssignment(requestData.id)}
+                  >
+                    <Text style={styles.clearButtonText}>
+                      Cancel Assignment
+                    </Text>
+                  </TouchableOpacity>
+                )}
 
-  {requestData.foodRequest?.volunteerAccepted === "true" && (
-    <TouchableOpacity 
-      style={styles.clearButton}
-      onPress={() => cancelVolunteerAssignment(requestData.id)}
-    >
-      <Text style={styles.clearButtonText}>Cancel Assignment</Text>
-    </TouchableOpacity>
-  )}
-</View>
+                {/* delete req */}
+                {requestData.foodRequest?.status === 'Pending' && (
+                  <TouchableOpacity
+                    style={styles.deleteButton}
+                    onPress={()=>deleteFoodRequest(requestData.id)}
+                  >
+                    <Text style={styles.deleteButtonText}>Withdraw Request</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
           )
         )}
@@ -539,8 +582,22 @@ const styles = StyleSheet.create({
     color: '#856404',
   },
   buttonContainer: {
-  gap: 10,
-  marginTop: 10,
+    gap: 10,
+    marginTop: 10,
+  },
+
+  deleteButton: {
+  backgroundColor: '#dc3545',
+  paddingVertical: 12,
+  paddingHorizontal: 25,
+  borderRadius: 4,
+  flex: 1,
+  alignItems: 'center',
+},
+deleteButtonText: {
+  color: 'white',
+  fontSize: 16,
+  fontWeight: 'bold',
 },
 });
 
