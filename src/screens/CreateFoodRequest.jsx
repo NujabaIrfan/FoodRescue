@@ -11,16 +11,16 @@ import {
 import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from 'react-native-ui-datepicker';
 import { auth, db } from '../../firebaseConfig';
-import { collection, addDoc, where, getDocs, query } from 'firebase/firestore';
+import { collection, addDoc, where, getDocs, query, doc, getDoc } from 'firebase/firestore';
 import { Timestamp } from 'firebase/firestore';
 import { useNavigation } from '@react-navigation/native';
 
 const CreateFoodRequest = ({ route }) => {
   const passedItem = route?.params?.item;
   const navigation=useNavigation();
-  const [orgName, setOrgName] = useState('ABC Organization');
-  const [orgID, setOrgID] = useState('ORG3562');
-  const [requestedBy, setRequestedBy] = useState('John Doe');
+  const [organizations, setOrganizations] = useState([]);
+  const [selectedOrgId, setSelectedOrgId] = useState('');
+  const [requestedBy, setRequestedBy] = useState('');
 
   const [foodItems, setFoodItems] = useState([
     {
@@ -39,6 +39,77 @@ const CreateFoodRequest = ({ route }) => {
   const [showPickupTime, setShowPickupTime] = useState(false);
 
   useEffect(()=>{
+    // check auth
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      if(!user){
+        Alert.alert('Access Denied', 'Please log in to create a food request');
+        navigation.navigate('volunteerLogin');
+      } else{
+        const userId=user.uid;
+        console.log('User uid', userId);
+
+        try{
+          const userDocRef = doc(db, 'Volunteers', userId);
+          const userDoc = await getDoc(userDocRef);
+
+          if(userDoc.exists()){
+            const userData = userDoc.data();
+            setRequestedBy(userData.name || user.email || 'User');
+            console.log('User name: ', userData.name);
+          } else {
+            setRequestedBy(user.email || 'User');
+          }
+
+          // fetch orgnizations
+        const orgsQuery = query(
+          collection(db, 'Organizations'),
+          where('user', '==', userId)
+        );
+        const orgsSnapshot = await getDocs(orgsQuery);
+
+        const userOrgs = [];
+        orgsSnapshot.forEach((doc)=> {
+          userOrgs.push({
+            id: doc.id,
+            ...doc.data()
+          });
+        });
+
+        setOrganizations(userOrgs);
+
+        //check user organizations
+        if (userOrgs.length === 0) {
+  Alert.alert(
+    'No Organization Found',
+    'You need to own an organization before creating a food request.',
+    [
+      {
+        text: 'Create Organization',
+        onPress: () => navigation.navigate('organizations') 
+      },
+      {
+        text: 'Go Back',
+        onPress: () => navigation.goBack()
+      }
+    ]
+  );
+  return; 
+}
+
+        if(userOrgs.length>0){
+          setSelectedOrgId(userOrgs[0].id);
+          setOrgName(userOrgs[0]);
+        }
+        } catch(error){
+          console.error('Error fetching user data:', error);
+          setRequestedBy(user.email || 'User');
+        }
+
+        
+      }
+    });
+
+    // fetch items
     const fetchSurplusItem = async () => {
       if(!passedItem) return;
 
@@ -61,6 +132,7 @@ const CreateFoodRequest = ({ route }) => {
     };
 
     fetchSurplusItem();
+    return () => unsubscribe();
   }, [passedItem]);
 
   const addFoodItem = () => {
@@ -81,10 +153,11 @@ const CreateFoodRequest = ({ route }) => {
   };
 
   const handleCreateRequest = async () => {
-    if (!orgName || !orgID || !requestedBy) {
-      Alert.alert('Error', 'Please fill in all organization details');
-      return;
-    }
+    if (!selectedOrgId || !requestedBy) {
+    Alert.alert('Error', 'Please select an organization');
+    return;
+  }
+  const selectedOrg = organizations.find(org => org.id === selectedOrgId);
 
     const hasEmptyItems = foodItems.some((item) => !item.item);
     if (hasEmptyItems) {
@@ -94,8 +167,8 @@ const CreateFoodRequest = ({ route }) => {
 
     const requestData = {
       organization: {
-        name: orgName,
-        id: orgID,
+        name: selectedOrg.name,
+        id: selectedOrgId,
         requestedBy,
       },
       foodRequest: {
@@ -138,24 +211,38 @@ const CreateFoodRequest = ({ route }) => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Organization Details</Text>
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Organization Name</Text>
-            <TextInput
-              style={styles.input}
-              value={orgName}
-              onChangeText={setOrgName}
-              placeholder="Org name fetched"
-            />
+            <Text style={styles.inputLabel}>Select Organization</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={selectedOrgId}
+                onValueChange={(itemValue)=> {
+                  selectedOrgId(itemValue);
+                  const selectedOrg = organizations.find(org => org.id === itemValue);
+                  if(selectedOrg){
+                    setOrgName(selectedOrg.name);
+                    setOrgID(itemValue);
+                  }
+                }}
+                style={styles.picker}
+              >
+                <Picker.Item
+                  label='Select an Organization'
+                  value=''
+                />
+
+                {organizations.map((org)=> (
+                  <Picker.Item
+                    key={org.id}
+                    label={org.name}
+                    value={org.id}
+                  />
+                ))}
+
+              </Picker>
+            </View>
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Organization ID</Text>
-            <TextInput
-              style={styles.input}
-              value={orgID}
-              onChangeText={setOrgID}
-              placeholder="Org ID fetched"
-            />
-          </View>
+          
 
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Request Made By</Text>
@@ -388,6 +475,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     backgroundColor: '#fff',
   },
+  pickerContainer: {
+  borderWidth: 1,
+  borderColor: '#ddd',
+  borderRadius: 4,
+  backgroundColor: '#fff',
+},
+picker: {
+  height: 50,
+},
   submitButton: {
     backgroundColor: '#106a25ff',
     paddingVertical: 12,
