@@ -15,7 +15,7 @@ import FoodRequestCard from "../components/FoodRequestCard";
 import { useNavigation } from "@react-navigation/native";
 
 const FoodRequestListScreen = ({ route }) => {
-  const { id } = route.params
+  const { id } = route?.params || {}
   const navigation = useNavigation();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
