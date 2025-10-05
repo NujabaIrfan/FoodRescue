@@ -31,7 +31,8 @@ import OrganizationEvents from './src/screens/OrganizationEvents';
 import VolunteerForgotPassword from './src/screens/VolunteerForgotPassword';
 import DonorFoodRequest from './src/screens/DonorFoodRequest';
 import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
-import OrganizationSettings from './src/screens/OrganizationSettings';
+import FontAwesome from 'react-native-vector-icons/FontAwesome6';
+
 
 const Tab = createBottomTabNavigator()
 
@@ -39,7 +40,8 @@ function BottomTabs() {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        headerShown: false,
+        // Header shown for individual tab screens
+        headerShown: true, 
         tabBarIcon: ({ color, size }) => {
           if (route.name === 'Home') {
             return <MaterialIcon name="home" size={32} color={color} />;
@@ -62,7 +64,6 @@ function BottomTabs() {
           paddingTop: 6,
         },
         animation: 'shift',
-
       })}
     >
       <Tab.Screen name="Home" component={Home} />
@@ -77,35 +78,41 @@ function BottomTabs() {
 const RootStack = createNativeStackNavigator({
   initialRouteName: 'tabs',
   screens: {
-    tabs: BottomTabs,
-    home: Home,
-    createOrganization: CreateOrganization,
-    signup: Signup,
-    restaurantList: RestaurantList,
-    organizations: Organizations,
-    organization: Organization,
-    createEvent: CreateEvent,
-    donorSignUp: DonorSignUp,
-    donorSignIn: DonorSignIn,
-    forgotPassword: ForgotPassword,
-    donorProfile: DonorProfile,
-    volunteerSignUp: VolunteerSignUp,
-    volunteerLogin: VolunteerLogin,
-    volunteerSection: VolunteerSection,
-    volunteerProfile: VolunteerProfile,
-    createFoodRequest: CreateFoodRequest,
-    foodRequestMgtNav: FoodRequestMgtNav,
-    displayFoodRequest: DisplayFoodRequest,
-    displayRequestAdminInterface: DisplayRequestAdminInterface,
-    foodRequestListScreen: FoodRequestListScreen,
-    chatbotScreen: ChatbotScreen,
-    surplus: Surplus,
-    surplusList: SurplusList,
-    organizationVolunteers: OrganizationVolunteers,
-    organizationEvents: OrganizationEvents,
-    volunteerForgotPassword: VolunteerForgotPassword,
-    donorFoodRequest: DonorFoodRequest,
-    organizationSettings: OrganizationSettings
+    // Hide the stack header for the 'tabs' screen itself
+    tabs: {
+        screen: BottomTabs,
+        options: {
+            headerShown: false,
+        },
+    },
+    // All these screens are outside the tab navigator and will cover the tabs,
+    // and they will have a header shown by default to allow back navigation.
+    home: { screen: Home },
+    createOrganization: { screen: CreateOrganization },
+    signup: { screen: Signup },
+    organizations: { screen: Organizations },
+    organization: { screen: Organization },
+    createEvent: { screen: CreateEvent },
+    donorSignUp: { screen: DonorSignUp },
+    donorSignIn: { screen: DonorSignIn },
+    forgotPassword: { screen: ForgotPassword },
+    donorProfile: { screen: DonorProfile },
+    volunteerSignUp: { screen: VolunteerSignUp },
+    volunteerLogin: { screen: VolunteerLogin },
+    volunteerSection: { screen: VolunteerSection },
+    volunteerProfile: { screen: VolunteerProfile },
+    createFoodRequest: { screen: CreateFoodRequest },
+    foodRequestMgtNav: { screen: FoodRequestMgtNav },
+    displayFoodRequest: { screen: DisplayFoodRequest },
+    displayRequestAdminInterface: { screen: DisplayRequestAdminInterface },
+    foodRequestListScreen: { screen: FoodRequestListScreen },
+    chatbotScreen: { screen: ChatbotScreen },
+    surplus: { screen: Surplus },
+    surplusList: { screen: SurplusList },
+    organizationVolunteers: { screen: OrganizationVolunteers },
+    organizationEvents: { screen: OrganizationEvents },
+    volunteerForgotPassword: { screen: VolunteerForgotPassword },
+    donorFoodRequest: { screen: DonorFoodRequest }
   },
 });
 
