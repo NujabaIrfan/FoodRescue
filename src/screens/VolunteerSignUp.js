@@ -1,7 +1,6 @@
 import React, { useState , useEffect } from 'react';
 import { View, Text, Image, TextInput, TouchableOpacity, ScrollView, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { CheckBox } from 'react-native-elements';
-import { launchImageLibrary } from 'react-native-image-picker';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { auth, db } from '../../firebaseConfig';
 import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
@@ -9,6 +8,7 @@ import { doc, setDoc } from 'firebase/firestore';
 import Toast from 'react-native-toast-message';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function VolunteerSignUp() {
   const navigation = useNavigation();
@@ -23,28 +23,54 @@ export default function VolunteerSignUp() {
   const [profilePhoto, setProfilePhoto] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const pickImage = () => {
-    launchImageLibrary(
-      { mediaType: 'photo', quality: 1 },
-      (response) => {
-        if (!response.didCancel && !response.errorCode) {
-          const file = response.assets[0];
-          const fileSizeLimit = 2 * 1024 * 1024; // 2 MB
-
-          if (file.fileSize > fileSizeLimit) {
-            Toast.show({
-              type: 'error',
-              text1: 'File Too Large',
-              text2: 'Please select an image smaller than 2MB.',
-              position: 'top'
-            });
-            return;
-          }
-
-          setProfilePhoto(file.uri);
-        }
+  const pickImage = async () => {
+    try {
+      // Request permissions
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Toast.show({
+          type: 'error',
+          text1: 'Permission Required',
+          text2: 'Please grant camera roll permissions to upload images.',
+          position: 'top'
+        });
+        return;
       }
-    );
+
+      // Launch image picker
+      let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 1,
+      });
+
+      if (!result.canceled) {
+        const file = result.assets[0];
+        const fileSizeLimit = 2 * 1024 * 1024; // 2 MB
+
+        // Check file size if available
+        if (file.fileSize && file.fileSize > fileSizeLimit) {
+          Toast.show({
+            type: 'error',
+            text1: 'File Too Large',
+            text2: 'Please select an image smaller than 2MB.',
+            position: 'top'
+          });
+          return;
+        }
+
+        setProfilePhoto(file.uri);
+      }
+    } catch (error) {
+      console.error('Error selecting image:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to select image',
+        position: 'top'
+      });
+    }
   };
 
   const [skills, setSkills] = useState({

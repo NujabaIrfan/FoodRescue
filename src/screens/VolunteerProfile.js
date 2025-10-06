@@ -6,8 +6,8 @@ import { signOut, updatePassword, reauthenticateWithCredential, EmailAuthProvide
 import Toast from "react-native-toast-message";
 import { useNavigation } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import { launchImageLibrary } from 'react-native-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function VolunteerProfile() {
   const navigation = useNavigation();
@@ -441,30 +441,59 @@ export default function VolunteerProfile() {
   );
 };
 
-  const pickImage = () => {
-    launchImageLibrary(
-      { mediaType: 'photo', quality: 1 },
-      (response) => {
-        if (!response.didCancel && !response.errorCode) {
-          const file = response.assets[0];
-          const fileSizeLimit = 2 * 1024 * 1024; // 2 MB
+const pickImage = async () => {
+  try {
+    // Request permissions
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Toast.show({
+        type: 'error',
+        text1: 'Permission Required',
+        text2: 'Please grant camera roll permissions to upload images.',
+        position: 'top',
+        visibilityTime: 3000
+      });
+      return;
+    }
 
-          if (file.fileSize > fileSizeLimit) {
-            Toast.show({
-              type: 'error',
-              text1: 'File Too Large',
-              text2: 'Please select an image smaller than 2MB.',
-              position: 'top',
-              visibilityTime: 3000
-            });
-            return;
-          }
+    // Launch image picker
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1, // Keep your original quality setting
+      base64: false, // We don't need base64 for profile photo URI
+    });
 
-          setProfilePhoto(file.uri);
-        }
+    if (!result.canceled) {
+      const file = result.assets[0];
+      
+      // For Expo Image Picker, we need to estimate file size differently
+      // since fileSize might not be available directly
+      if (file.fileSize && file.fileSize > 2 * 1024 * 1024) {
+        Toast.show({
+          type: 'error',
+          text1: 'File Too Large',
+          text2: 'Please select an image smaller than 2MB.',
+          position: 'top',
+          visibilityTime: 3000
+        });
+        return;
       }
-    );
-  };
+
+      setProfilePhoto(file.uri);
+    }
+  } catch (error) {
+    console.error('Error selecting image:', error);
+    Toast.show({
+      type: 'error',
+      text1: 'Error',
+      text2: 'Failed to select image',
+      position: 'top',
+      visibilityTime: 3000
+    });
+  }
+};
 
   const toggleSkill = (skillName) => {
     const updatedSkills = { ...skills, [skillName]: !skills[skillName] };
@@ -564,103 +593,120 @@ export default function VolunteerProfile() {
     }
   };
 
-  const pickCompletedWorkPhoto = (workIndex) => {
-    launchImageLibrary(
-      { mediaType: 'photo', quality: 1, includeBase64: true },
-      async (response) => {
-        if (!response.didCancel && !response.errorCode) {
-          const file = response.assets[0];
-          const fileSizeLimit = 2 * 1024 * 1024; // 2 MB
-
-          if (file.fileSize > fileSizeLimit) {
-            Toast.show({
-              type: 'error',
-              text1: 'File Too Large',
-              text2: 'Please select an image smaller than 2MB.',
-              position: 'top'
-            });
-            return;
-          }
-
-          // Check if work exists
-          if (!completedWorks[workIndex]) {
-            Toast.show({
-              type: 'error',
-              text1: 'Work Not Found',
-              text2: 'Completed work not found for photo upload.',
-              position: 'top'
-            });
-            return;
-          }
-
-          // Check maximum photos limit per work
-          const MAX_PHOTOS_PER_WORK = 3;
-          const currentWork = completedWorks[workIndex];
-          
-          const currentPhotos = currentWork.completionPhotos || [];
-          if (currentPhotos.length >= MAX_PHOTOS_PER_WORK) {
-            Toast.show({
-              type: 'error',
-              text1: 'Maximum Photos Reached',
-              text2: `You can only upload up to ${MAX_PHOTOS_PER_WORK} photos per work.`,
-              position: 'top'
-            });
-            return;
-          }
-
-          setUploading(true);
-          
-          // Determine MIME type
-          let mimeType = file.type;
-          if (!mimeType || mimeType === 'undefined') {
-            if (file.fileName) {
-              if (file.fileName.toLowerCase().endsWith('.png')) {
-                mimeType = 'image/png';
-              } else if (file.fileName.toLowerCase().endsWith('.gif')) {
-                mimeType = 'image/gif';
-              } else {
-                mimeType = 'image/jpeg';
-              }
-            } else {
-              mimeType = 'image/jpeg';
-            }
-          }
-          
-          // Convert to Base64 string
-          const base64Image = `data:${mimeType};base64,${file.base64}`;
-          
-          // Add photo to specific work
-          const updatedCompletedWorks = [...completedWorks];
-          if (!updatedCompletedWorks[workIndex].completionPhotos) {
-            updatedCompletedWorks[workIndex].completionPhotos = [];
-          }
-          updatedCompletedWorks[workIndex].completionPhotos.push(base64Image);
-          
-          try {
-            const user = auth.currentUser;
-            if (user) {
-              await updateDoc(doc(db, "Volunteers", user.uid), { 
-                completedWorks: updatedCompletedWorks 
-              });
-              setCompletedWorks(updatedCompletedWorks);
-              Toast.show({ 
-                type: 'success', 
-                text1: 'Work photo added!',
-                text2: `Photo ${updatedCompletedWorks[workIndex].completionPhotos.length}/${MAX_PHOTOS_PER_WORK}`
-              });
-            }
-          } catch (error) {
-            console.error("Error adding work photo:", error);
-            Toast.show({ 
-              type: 'error', 
-              text1: 'Failed to add work photo' 
-            });
-          }
-          
-          setUploading(false);
-        }
+  const pickCompletedWorkPhoto = async (workIndex) => {
+    try {
+      // Request permissions
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Toast.show({
+          type: 'error',
+          text1: 'Permission Required',
+          text2: 'Please grant camera roll permissions to upload images.',
+          position: 'top'
+        });
+        return;
       }
-    );
+
+      // Launch image picker
+      let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.7, // Adjust quality as needed
+        base64: true, // This is important - get image as base64
+      });
+
+      if (!result.canceled) {
+        const file = result.assets[0];
+        const fileSizeLimit = 2 * 1024 * 1024; // 2 MB
+
+        // Check file size (estimate based on base64 length)
+        const base64Length = file.base64.length;
+        const sizeInBytes = (base64Length * 3) / 4; // Approximate byte size
+        
+        if (sizeInBytes > fileSizeLimit) {
+          Toast.show({
+            type: 'error',
+            text1: 'File Too Large',
+            text2: 'Please select an image smaller than 2MB.',
+            position: 'top'
+          });
+          return;
+        }
+
+        // Check if work exists
+        if (!completedWorks[workIndex]) {
+          Toast.show({
+            type: 'error',
+            text1: 'Work Not Found',
+            text2: 'Completed work not found for photo upload.',
+            position: 'top'
+          });
+          return;
+        }
+
+        // Check maximum photos limit per work
+        const MAX_PHOTOS_PER_WORK = 3;
+        const currentWork = completedWorks[workIndex];
+        
+        const currentPhotos = currentWork.completionPhotos || [];
+        if (currentPhotos.length >= MAX_PHOTOS_PER_WORK) {
+          Toast.show({
+            type: 'error',
+            text1: 'Maximum Photos Reached',
+            text2: `You can only upload up to ${MAX_PHOTOS_PER_WORK} photos per work.`,
+            position: 'top'
+          });
+          return;
+        }
+
+        setUploading(true);
+        
+        // Convert to Base64 string
+        const base64Image = `data:image/jpeg;base64,${file.base64}`;
+        
+        // Add photo to specific work
+        const updatedCompletedWorks = [...completedWorks];
+        if (!updatedCompletedWorks[workIndex].completionPhotos) {
+          updatedCompletedWorks[workIndex].completionPhotos = [];
+        }
+        updatedCompletedWorks[workIndex].completionPhotos.push(base64Image);
+        
+        try {
+          const user = auth.currentUser;
+          if (user) {
+            await updateDoc(doc(db, "Volunteers", user.uid), { 
+              completedWorks: updatedCompletedWorks 
+            });
+            setCompletedWorks(updatedCompletedWorks);
+            Toast.show({ 
+              type: 'success', 
+              text1: 'Work photo added!',
+              text2: `Photo ${updatedCompletedWorks[workIndex].completionPhotos.length}/${MAX_PHOTOS_PER_WORK}`,
+              position: 'top'
+            });
+          }
+        } catch (error) {
+          console.error("Error adding work photo:", error);
+          Toast.show({ 
+            type: 'error', 
+            text1: 'Failed to add work photo',
+            position: 'top'
+          });
+        }
+        
+        setUploading(false);
+      }
+    } catch (error) {
+      console.error('Error selecting image:', error);
+      setUploading(false);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to select image',
+        position: 'top'
+      });
+    }
   };
 
   const deleteCompletedWorkPhoto = async (workIndex, photoIndex) => {

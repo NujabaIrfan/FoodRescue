@@ -334,136 +334,137 @@ export default function VolunteerSection() {
 
   return (
     <LinearGradient
-      colors={['#87b34eff', '#F5F5DC', '#87b34eff']}  // Steel Blue → Midnight Blue
+      colors={['#87b34eff', '#F5F5DC', '#87b34eff']}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
-      style={styles.gradientBackground}>
-        <ScrollView style={styles.container}>
-          {/* Enhanced Header */}
-          <View style={styles.header}>
-            <View style={styles.headerContent}>
-              <View>
-                <Text style={styles.headerTitle}>Volunteer Network</Text>
-                <Text style={styles.headerSubtitle}>Connect with our dedicated volunteers</Text>
-              </View>
-              
-              <View style={styles.profileContainer}>
-                {user ? (
-                  <View style={styles.profileDropdownWrapper}>
-                    <TouchableOpacity 
-                      onPress={() => setShowMenu(!showMenu)} 
-                      style={styles.profileButton}
-                    >
-                      <Image source={{ uri: userPhoto }} style={styles.profileImage} />
-                      <View style={styles.onlineIndicator} />
-                    </TouchableOpacity>
+      style={styles.gradientBackground}
+    >
+      {/* Remove ScrollView and use FlatList for everything */}
+      <FlatList
+        data={volunteers}
+        renderItem={renderVolunteerItem}
+        keyExtractor={(item) => item.id}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.container}
+        style={styles.flatList}
+        ListHeaderComponent={
+          <View>
+            {/* Enhanced Header */}
+            <View style={styles.header}>
+              <View style={styles.headerContent}>
+                <View>
+                  <Text style={styles.headerTitle}>Volunteer Network</Text>
+                  <Text style={styles.headerSubtitle}>Connect with our dedicated volunteers</Text>
+                </View>
+                
+                <View style={styles.profileContainer}>
+                  {user ? (
+                    <View style={styles.profileDropdownWrapper}>
+                      <TouchableOpacity 
+                        onPress={() => setShowMenu(!showMenu)} 
+                        style={styles.profileButton}
+                      >
+                        <Image source={{ uri: userPhoto }} style={styles.profileImage} />
+                        <View style={styles.onlineIndicator} />
+                      </TouchableOpacity>
 
-                    <Modal
-                      transparent={true}
-                      visible={showMenu}
-                      animationType="fade"
-                      onRequestClose={() => setShowMenu(false)}
-                    >
-                      <TouchableWithoutFeedback onPress={() => setShowMenu(false)}>
-                        <View style={styles.modalOverlay}>
-                          <View style={styles.modalDropdownMenu}>
-                            <TouchableOpacity
-                              onPress={() => {
-                                setShowMenu(false);
-                                navigation.navigate('volunteerProfile');
-                              }}
-                              style={[styles.dropdownButton, styles.profileDropdownButton]}
-                            >
-                              <MaterialIcons name="person" size={20} color="#333" style={styles.dropdownIcon} />
-                              <Text style={styles.dropdownButtonText}>My Profile</Text>
-                            </TouchableOpacity>
+                      <Modal
+                        transparent={true}
+                        visible={showMenu}
+                        animationType="fade"
+                        onRequestClose={() => setShowMenu(false)}
+                      >
+                        <TouchableWithoutFeedback onPress={() => setShowMenu(false)}>
+                          <View style={styles.modalOverlay}>
+                            <View style={styles.modalDropdownMenu}>
+                              <TouchableOpacity
+                                onPress={() => {
+                                  setShowMenu(false);
+                                  navigation.navigate('volunteerProfile');
+                                }}
+                                style={[styles.dropdownButton, styles.profileDropdownButton]}
+                              >
+                                <MaterialIcons name="person" size={20} color="#333" style={styles.dropdownIcon} />
+                                <Text style={styles.dropdownButtonText}>My Profile</Text>
+                              </TouchableOpacity>
 
-                            <TouchableOpacity
-                              onPress={handleSignOut}
-                              style={[styles.dropdownButton, styles.logoutDropdownButton]}
-                            >
-                              <MaterialIcons name="logout" size={20} color="#fff" style={styles.dropdownIcon} />
-                              <Text style={[styles.dropdownButtonText, styles.logoutDropdownText]}>Sign Out</Text>
-                            </TouchableOpacity>
+                              <TouchableOpacity
+                                onPress={handleSignOut}
+                                style={[styles.dropdownButton, styles.logoutDropdownButton]}
+                              >
+                                <MaterialIcons name="logout" size={20} color="#fff" style={styles.dropdownIcon} />
+                                <Text style={[styles.dropdownButtonText, styles.logoutDropdownText]}>Sign Out</Text>
+                              </TouchableOpacity>
+                            </View>
                           </View>
-                        </View>
-                      </TouchableWithoutFeedback>
-                    </Modal>
-                  </View>
-                ) : (
-                  <TouchableOpacity 
-                    style={styles.loginButton} 
-                    onPress={() => navigation.navigate('volunteerLogin')}
-                  >
-                    <Text style={styles.loginText}>Join Us</Text>
-                  </TouchableOpacity>
-                )}
+                        </TouchableWithoutFeedback>
+                      </Modal>
+                    </View>
+                  ) : (
+                    <TouchableOpacity 
+                      style={styles.loginButton} 
+                      onPress={() => navigation.navigate('volunteerLogin')}
+                    >
+                      <Text style={styles.loginText}>Join Us</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+
+              {/* Stats Overview */}
+              <View style={styles.statsOverview}>
+                <View style={styles.statItem}>
+                  <Text style={styles.statNumber}>{volunteers.length}</Text>
+                  <Text style={styles.statLabel}>Total Volunteers</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                  <Text style={[styles.statNumber, styles.goldStat]}>
+                    {volunteers.filter(v => v.medals?.includes('gold')).length}
+                  </Text>
+                  <Text style={styles.statLabel}>Gold 🥇</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                  <Text style={[styles.statNumber, styles.silverStat]}>
+                    {volunteers.filter(v => v.medals?.includes('silver')).length}
+                  </Text>
+                  <Text style={styles.statLabel}>Silver 🥈</Text>
+                </View>
               </View>
             </View>
 
-            {/* Stats Overview */}
-            <View style={styles.statsOverview}>
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{volunteers.length}</Text>
-                <Text style={styles.statLabel}>Total Volunteers</Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statItem}>
-                <Text style={[styles.statNumber, styles.goldStat]}>
-                  {volunteers.filter(v => v.medals?.includes('gold')).length}
-                </Text>
-                <Text style={styles.statLabel}>Gold 🥇</Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statItem}>
-                <Text style={[styles.statNumber, styles.silverStat]}>
-                  {volunteers.filter(v => v.medals?.includes('silver')).length}
-                </Text>
-                <Text style={styles.statLabel}>Silver 🥈</Text>
-              </View>
+            {/* List Header */}
+            <View style={styles.listHeader}>
+              <Text style={styles.listTitle}>Volunteer Leaderboard</Text>
+              <Text style={styles.listSubtitle}>
+                Ranked by achievements and contributions
+              </Text>
             </View>
           </View>
-
-          {/* Main Content */}
-          <View style={styles.content}>
-            {loading ? (
-              <View style={styles.loadingContainer}>
-                <MaterialIcons name="people" size={60} color="#3498db" />
-                <Text style={styles.loadingTitle}>Loading Volunteers</Text>
-                <Text style={styles.loadingSubtitle}>Connecting to our network...</Text>
-              </View>
-            ) : volunteers.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <MaterialIcons name="group-off" size={80} color="#bdc3c7" />
-                <Text style={styles.emptyTitle}>No Volunteers Yet</Text>
-                <Text style={styles.emptySubtitle}>Be the first to join our volunteer network!</Text>
-                <TouchableOpacity 
-                  style={styles.ctaButton}
-                  onPress={() => navigation.navigate('volunteerLogin')}
-                >
-                  <Text style={styles.ctaText}>Become a Volunteer</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <FlatList
-                data={volunteers}
-                renderItem={renderVolunteerItem}
-                keyExtractor={(item) => item.id}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.listContainer}
-                ListHeaderComponent={
-                  <View style={styles.listHeader}>
-                    <Text style={styles.listTitle}>Volunteer Leaderboard</Text>
-                    <Text style={styles.listSubtitle}>
-                      Ranked by achievements and contributions
-                    </Text>
-                  </View>
-                }
-              />
-            )}
-          </View>
-        </ScrollView>
-      
+        }
+        ListEmptyComponent={
+          loading ? (
+            <View style={styles.loadingContainer}>
+              <MaterialIcons name="people" size={60} color="#3498db" />
+              <Text style={styles.loadingTitle}>Loading Volunteers</Text>
+              <Text style={styles.loadingSubtitle}>Connecting to our network...</Text>
+            </View>
+          ) : (
+            <View style={styles.emptyContainer}>
+              <MaterialIcons name="group-off" size={80} color="#bdc3c7" />
+              <Text style={styles.emptyTitle}>No Volunteers Yet</Text>
+              <Text style={styles.emptySubtitle}>Be the first to join our volunteer network!</Text>
+              <TouchableOpacity 
+                style={styles.ctaButton}
+                onPress={() => navigation.navigate('volunteerLogin')}
+              >
+                <Text style={styles.ctaText}>Become a Volunteer</Text>
+              </TouchableOpacity>
+            </View>
+          )
+        }
+      />
     </LinearGradient>
   );
 }
@@ -474,8 +475,11 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  flatList: {
+    flex: 1,
+  },
   container: { 
-    flex: 1, 
+    flexGrow: 1, 
   },
   
   // ========== HEADER STYLES ==========
