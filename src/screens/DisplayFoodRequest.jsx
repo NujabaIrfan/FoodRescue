@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { auth, db } from '../../firebaseConfig';
 import {
@@ -19,7 +20,8 @@ import {
 } from 'firebase/firestore';
 import { useNavigation } from '@react-navigation/native';
 import { Picker } from '@react-native-picker/picker';
-import DateTimePicker from 'react-native-ui-datepicker';
+import DateTimePicker, { useDefaultStyles } from 'react-native-ui-datepicker';
+import DateTimePickerCommunity from '@react-native-community/datetimepicker';
 
 const DisplayFoodRequest = ({ route }) => {
   const { requestId } = route.params;
@@ -34,6 +36,7 @@ const DisplayFoodRequest = ({ route }) => {
   const [showEditRequiredDate, setShowEditRequiredDate] = useState(false);
   const [showEditPickupDate, setShowEditPickupDate] = useState(false);
   const [showEditPickupTime, setShowEditPickupTime] = useState(false);
+  const defaultStyles = useDefaultStyles();
 
   useEffect(() => {
     const fetchRequestData = async () => {
@@ -197,16 +200,16 @@ const DisplayFoodRequest = ({ route }) => {
     setIsEditing(true);
     setEditedData({
       items: requestData.foodRequest.items,
-      requiredBefore: requestData.foodRequest.requiredBefore.toDate
-        ? requestData.foodRequest.requiredBefore.toDate()
-        : new Date(requestData.foodRequest.requiredBefore),
+      requiredBefore:
+        requestData.foodRequest.requiredBefore.toDate?.() ||
+        new Date(requestData.foodRequest.requiredBefore),
       priority: requestData.foodRequest.priority,
-      pickupDate: requestData.foodRequest.pickupDate.toDate
-        ? requestData.foodRequest.pickupDate.toDate()
-        : new Date(requestData.foodRequest.pickupDate),
-      pickupTime: requestData.foodRequest.pickupTime.toDate
-        ? requestData.foodRequest.pickupTime.toDate()
-        : new Date(requestData.foodRequest.pickupTime),
+      pickupDate:
+        requestData.foodRequest.pickupDate.toDate?.() ||
+        new Date(requestData.foodRequest.pickupDate),
+      pickupTime:
+        requestData.foodRequest.pickupTime.toDate?.() ||
+        new Date(requestData.foodRequest.pickupTime),
     });
   };
 
@@ -566,55 +569,108 @@ const DisplayFoodRequest = ({ route }) => {
                   </TouchableOpacity>
                 )}
 
-                {showEditPickupDate && (
-                  <DateTimePicker
-                    value={editedData.requiredBefore}
-                    mode="date"
-                    display="default"
-                    onChange={(event, selectedDate) => {
-                      setShowEditRequiredDate(false);
-                      if (selectedDate) {
-                        setEditedData({
-                          ...editedData,
-                          requiredBefore: selectedDate,
-                        });
-                      }
-                    }}
-                  />
+                {/* here */}
+
+                {showEditRequiredDate && (
+                  <Modal
+                    visible={showEditRequiredDate}
+                    transparent={true}
+                    animationType="slide"
+                    onRequestClose={() => setShowEditRequiredDate(false)}
+                  >
+                    <View style={styles.modalOverlay}>
+                      <View style={styles.modalContainer}>
+                        <DateTimePicker
+                          mode="single"
+                          date={editedData.requiredBefore}
+                          minDate={new Date()} // Restrict to today/future
+                          onChange={({ date }) => {
+                            if (date)
+                              setEditedData({
+                                ...editedData,
+                                requiredBefore: date,
+                              });
+                          }}
+                          styles={defaultStyles}
+                        />
+                        <TouchableOpacity
+                          style={styles.doneButton}
+                          onPress={() => setShowEditRequiredDate(false)}
+                        >
+                          <Text style={styles.doneButtonText}>Done</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </Modal>
                 )}
 
+                {/* Edit Pickup Date Modal */}
                 {showEditPickupDate && (
-                  <DateTimePicker
-                    value={editedData.pickupDate}
-                    mode="date"
-                    display="default"
-                    onChange={(event, selectedDate) => {
-                      setShowEditPickupDate(false);
-                      if (selectedDate) {
-                        setEditedData({
-                          ...editedData,
-                          pickupDate: selectedDate,
-                        });
-                      }
-                    }}
-                  />
+                  <Modal
+                    visible={showEditPickupDate}
+                    transparent={true}
+                    animationType="slide"
+                    onRequestClose={() => setShowEditPickupDate(false)}
+                  >
+                    <View style={styles.modalOverlay}>
+                      <View style={styles.modalContainer}>
+                        <DateTimePicker
+                          mode="single"
+                          date={editedData.pickupDate}
+                          minDate={new Date()}
+                          onChange={({ date }) => {
+                            if (date)
+                              setEditedData({
+                                ...editedData,
+                                pickupDate: date,
+                              });
+                          }}
+                          styles={defaultStyles}
+                        />
+                        <TouchableOpacity
+                          style={styles.doneButton}
+                          onPress={() => setShowEditPickupDate(false)}
+                        >
+                          <Text style={styles.doneButtonText}>Done</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </Modal>
                 )}
 
+                {/* Edit Pickup Time Modal (Time-Only with Community Picker) */}
                 {showEditPickupTime && (
-                  <DateTimePicker
-                    value={editedData.pickupTime}
-                    mode="time"
-                    display="default"
-                    onChange={(event, selectedTime) => {
-                      setShowEditPickupTime(false);
-                      if (selectedTime) {
-                        setEditedData({
-                          ...editedData,
-                          pickupTime: selectedTime,
-                        });
-                      }
-                    }}
-                  />
+                  <Modal
+                    visible={showEditPickupTime}
+                    transparent={true}
+                    animationType="fade"
+                    onRequestClose={() => setShowEditPickupTime(false)}
+                  >
+                    <View style={styles.modalOverlay}>
+                      <View style={styles.modalContainer}>
+                        <DateTimePickerCommunity
+                          value={editedData.pickupTime}
+                          mode="time"
+                          display="default"
+                          is24Hour={false} // 12hr with AM/PM
+                          onChange={(event, selectedTime) => {
+                            setShowEditPickupTime(false);
+                            if (selectedTime)
+                              setEditedData({
+                                ...editedData,
+                                pickupTime: selectedTime,
+                              });
+                          }}
+                        />
+                        <TouchableOpacity
+                          style={styles.doneButton}
+                          onPress={() => setShowEditPickupTime(false)}
+                        >
+                          <Text style={styles.doneButtonText}>Done</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </Modal>
                 )}
               </View>
             </View>
@@ -852,38 +908,79 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   editDateButton: {
-  flex: 1,
-},
-pickerWrapper: {
-  flex: 1,
-  borderWidth: 1,
-  borderColor: '#ddd',
-  borderRadius: 4,
-},
-editPicker: {
-  height: 40,
-},
-counterContainer: {
-  flexDirection: 'row',
-  alignItems: 'center',
-},
-counterButton: {
-  width: 30,
-  height: 30,
-  borderRadius: 4,
-  backgroundColor: '#e0e0e0',
-  justifyContent: 'center',
-  alignItems: 'center',
-},
-counterText: {
-  fontSize: 16,
-  fontWeight: 'bold',
-},
-amountValue: {
-  marginHorizontal: 15,
-  fontSize: 14,
-  fontWeight: '500',
-},
+    flex: 1,
+  },
+  pickerWrapper: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 4,
+  },
+  editPicker: {
+    height: 40,
+  },
+  counterContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  counterButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 4,
+    backgroundColor: '#e0e0e0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  counterText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  amountValue: {
+    marginHorizontal: 15,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContainer: {
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    width: '90%',
+    maxHeight: '80%',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  doneButton: {
+    marginTop: 20,
+    backgroundColor: '#007bff',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+  },
+  doneButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  editDateButton: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 4,
+    padding: 10,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+  },
 });
 
 export default DisplayFoodRequest;
