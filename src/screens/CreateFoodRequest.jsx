@@ -200,7 +200,7 @@ const CreateFoodRequest = ({ route }) => {
 
       Alert.alert('Success', 'Food request created successfully');
       console.log(requestData);
-      navigation.navigate('foodRequestListScreen');
+      navigation.navigate('volunteerProfile');
     } catch (error) {
       console.error('Error adding document: ', error);
       Alert.alert('Error', 'Something went wrong');

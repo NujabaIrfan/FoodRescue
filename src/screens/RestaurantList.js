@@ -227,6 +227,14 @@ const RestaurantList = () => {
 />
 
       )}
+
+      {/* chatbot - floating button */}
+      <TouchableOpacity
+        style={styles.floatingButton}
+        onPress={() => navigation.navigate('chatbotScreen')}  
+      >
+        <Text style={styles.floatingButtonText}>💬</Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -291,6 +299,26 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   list: { padding: 16 },
+  floatingButton: {
+  position: 'absolute',
+  bottom: 20,
+  right: 20,
+  width: 60,
+  height: 60,
+  borderRadius: 30,
+  backgroundColor: '#3b82f6',
+  justifyContent: 'center',
+  alignItems: 'center',
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.3,
+  shadowRadius: 4,
+  elevation: 8,
+},
+floatingButtonText: {
+  fontSize: 28,
+  color: '#ffffff',
+},
 });
 
 export default RestaurantList;

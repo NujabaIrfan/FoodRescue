@@ -123,6 +123,7 @@ const DisplayFoodRequest = ({ route }) => {
       'foodRequest.volunteerEmail': currentUser.email,
     });
     Alert.alert('Success', 'Request assigned successfully');
+    
 
     setRequestData((prev) => ({
       ...prev,
