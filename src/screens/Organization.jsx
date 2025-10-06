@@ -11,10 +11,11 @@ import DonationRequest from '../components/DonationRequest';
 import OrganizationEvent from '../components/OrganizationEvent';
 import { useEffect, useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
-import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, limit, query, where } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { auth } from '../../firebaseConfig';
 import Toast from 'react-native-toast-message';
+import FoodRequestCard from '../components/FoodRequestCard';
 
 const Organization = ({ route }) => {
   const { currentUser } = auth
@@ -22,6 +23,7 @@ const Organization = ({ route }) => {
   const [organizationData, setOrganizationData] = useState(null)
   const [isShowingFullDescription, setIsShowingFullDescription] = useState(false);
   const [isFetchError, setIsFetchError] = useState(false)
+  const [requests, setRequests] = useState([])
   const { id } = route.params
   if (!id) return (
     <View>
@@ -70,6 +72,19 @@ const Organization = ({ route }) => {
         setIsFetchError(true)
       }
     })()
+  }, [id])
+
+  useEffect(() => {
+    (async () => {
+      const requestsRef = collection(db, "foodRequests")
+      const q = query(requestsRef,
+        where("organization.id", "==", id),
+        limit(5)
+      )
+       const snapshot = await getDocs(q);
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setRequests(data);
+  })()
   }, [id])
 
 
@@ -147,17 +162,20 @@ const Organization = ({ route }) => {
       <View style={styles.heading}>
         <Text style={styles.primaryHeading}>Requests</Text>
         {hasAdminRights && (
-          <TouchableOpacity style={styles.button}>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() => navigator.navigate("foodRequestListScreen", { id })}
+          >
             <Text style={styles.buttonText}>Manage requests</Text>
           </TouchableOpacity>
         )}
       </View>
-      <DonationRequest />
-      <DonationRequest />
-      <DonationRequest />
-      <DonationRequest />
-      <DonationRequest />
-      <DonationRequest />
+      {requests.map((request, index) => (
+        <FoodRequestCard 
+          key={index}
+          request={request}
+        />
+      ))}
     </ScrollView>
   );
 };
