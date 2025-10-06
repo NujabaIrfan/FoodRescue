@@ -77,6 +77,13 @@ const FoodRequestMgtNav = () => {
         >
           <Text style={styles.buttonOutlineText}>Chatbot</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={()=>navigation.navigate('acceptedFoodRequestList')}
+          style={[styles.button, styles.buttonOutline]}
+        >
+          <Text style={styles.buttonOutlineText}>Accepted Requests</Text>
+        </TouchableOpacity>
       </View>
 
 

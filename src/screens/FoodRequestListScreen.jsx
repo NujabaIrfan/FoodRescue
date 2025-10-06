@@ -21,10 +21,11 @@ const FoodRequestListScreen = ({ route }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filterStatus, setFilterStatus] = useState("all");
+  const [sortBy, setSortBy] = useState("newest");
 
   useEffect(() => {
     fetchRequests();
-  }, []);
+  }, [id]);
 
   const fetchRequests = async () => {
     try {
@@ -87,10 +88,32 @@ const FoodRequestListScreen = ({ route }) => {
 };
 
   const getFilteredRequests = () => {
-  if (filterStatus === "all") return requests;
-  return requests.filter(
-    (request) => request.foodRequest?.status === filterStatus
+  let filtered = requests.filter(
+    (request) => filterStatus === "all" || request.foodRequest?.status === filterStatus
   );
+
+  if (sortBy === "newest") {
+    filtered = filtered.sort((a, b) => {
+      const dateA = a.createdAt ? (a.createdAt.toDate ? a.createdAt.toDate() : new Date(a.createdAt)) : new Date(0);
+      const dateB = b.createdAt ? (b.createdAt.toDate ? b.createdAt.toDate() : new Date(b.createdAt)) : new Date(0);
+      return dateB - dateA;  // Descending (newest first)
+    });
+  } else if (sortBy === "oldest") {
+    filtered = filtered.sort((a, b) => {
+      const dateA = a.createdAt ? (a.createdAt.toDate ? a.createdAt.toDate() : new Date(a.createdAt)) : new Date(0);
+      const dateB = b.createdAt ? (b.createdAt.toDate ? b.createdAt.toDate() : new Date(b.createdAt)) : new Date(0);
+      return dateA - dateB;  // Ascending (oldest first)
+    });
+  } else if (sortBy === "priority") {
+    const priorityOrder = { Urgent: 4, High: 3, Medium: 2, Low: 1 };
+    filtered = filtered.sort((a, b) => {
+      const prioA = priorityOrder[a.foodRequest?.priority] || 0;
+      const prioB = priorityOrder[b.foodRequest?.priority] || 0;
+      return prioB - prioA;  // Descending (highest priority first)
+    });
+  }
+
+  return filtered;
 };
 
   const counts = getRequestCounts();
@@ -180,6 +203,27 @@ const FoodRequestListScreen = ({ route }) => {
           </TouchableOpacity>
         </View>
       )}
+
+      <View style={styles.sortContainer}>
+        <TouchableOpacity
+          style={[styles.sortButton, sortBy === 'newest' && styles.activeSort]}
+          onPress={() => setSortBy('newest')}
+        >
+          <Text style={styles.sortText}>Newest</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.sortButton, sortBy === 'oldest' && styles.activeSort]}
+          onPress={() => setSortBy('oldest')}
+        >
+          <Text style={styles.sortText}>Oldest</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.sortButton, sortBy === 'priority' && styles.activeSort]}
+          onPress={() => setSortBy('priority')}
+        >
+          <Text style={styles.sortText}>Priority</Text>
+        </TouchableOpacity>
+      </View>
 
       <ScrollView
         style={styles.listContainer}
@@ -314,6 +358,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#999',
     textAlign: 'center',
+  },
+  sortContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    
+  },
+  sortButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 5,
+  },
+  activeSort: {
+    backgroundColor: '#e3f2fd',
+  },
+  sortText: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '500',
   },
 });
 

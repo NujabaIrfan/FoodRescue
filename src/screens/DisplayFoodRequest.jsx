@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { auth, db } from '../../firebaseConfig';
 import {
@@ -19,7 +20,8 @@ import {
 } from 'firebase/firestore';
 import { useNavigation } from '@react-navigation/native';
 import { Picker } from '@react-native-picker/picker';
-import DateTimePicker from 'react-native-ui-datepicker';
+import DateTimePicker, { useDefaultStyles } from 'react-native-ui-datepicker';
+import DateTimePickerCommunity from '@react-native-community/datetimepicker';
 
 const DisplayFoodRequest = ({ route }) => {
   const { requestId } = route.params;
@@ -27,6 +29,7 @@ const DisplayFoodRequest = ({ route }) => {
   const [requestData, setRequestData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [notFound, setNotFound] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
 
   // for update feature
   const [isEditing, setIsEditing] = useState(false);
@@ -34,8 +37,20 @@ const DisplayFoodRequest = ({ route }) => {
   const [showEditRequiredDate, setShowEditRequiredDate] = useState(false);
   const [showEditPickupDate, setShowEditPickupDate] = useState(false);
   const [showEditPickupTime, setShowEditPickupTime] = useState(false);
+  const defaultStyles = useDefaultStyles();
 
   useEffect(() => {
+    //check auth
+    const unsubscribe = auth.onAuthStateChanged((user)=> {
+      if(!user) {
+        setCurrentUser(null);
+      } else {
+        setCurrentUser(user);
+        console.log('User uid: ', user.uid);
+      }
+    });
+
+
     const fetchRequestData = async () => {
       if (!requestId) return;
       try {
@@ -58,6 +73,8 @@ const DisplayFoodRequest = ({ route }) => {
       }
     };
     fetchRequestData();
+
+    return () => unsubscribe();
   }, [requestId]);
   // const fetchRequestData = async () => {
   //   if (!requestId.trim()) {
@@ -91,39 +108,71 @@ const DisplayFoodRequest = ({ route }) => {
   // };
 
   const volunteerAcceptFoodRequest = async (requestId) => {
-    try {
-      const docRef = doc(db, 'foodRequests', requestId);
-      await updateDoc(docRef, { 'foodRequest.volunteerAccepted': 'true' });
-      Alert.alert('Success', 'Request assigned successfully');
+  if (!currentUser) {
+    Alert.alert('Login Required', 'Please log in to assign requests');
+    navigation.navigate('volunteerLogin');
+    return;
+  }
 
-      setRequestData((prev) => ({
-        ...prev,
-        foodRequest: { ...prev.foodRequest, volunteerAccepted: 'true' },
-      }));
-    } catch (error) {
-      console.error('Error updating request:', error);
-      Alert.alert(
-        'Error',
-        'Failed to assign the request. Check console for details.'
-      );
-    }
-  };
+  try {
+    const docRef = doc(db, 'foodRequests', requestId);
+    await updateDoc(docRef, { 
+      'foodRequest.volunteerAccepted': 'true',
+      'foodRequest.volunteerId': currentUser.uid,
+      'foodRequest.volunteerName': currentUser.displayName || currentUser.email.split('@')[0] || 'Volunteer',
+      'foodRequest.volunteerEmail': currentUser.email,
+    });
+    Alert.alert('Success', 'Request assigned successfully');
+    
+
+    setRequestData((prev) => ({
+      ...prev,
+      foodRequest: { 
+        ...prev.foodRequest, 
+        volunteerAccepted: 'true',
+        volunteerId: currentUser.uid,
+        volunteerName: currentUser.displayName || currentUser.email.split('@')[0] || 'Volunteer',
+        volunteerEmail: currentUser.email,
+      },
+    }));
+  } catch (error) {
+    console.error('Error updating request:', error);
+    Alert.alert('Error', 'Failed to assign the request. Check console for details.');
+  }
+};
 
   const cancelVolunteerAssignment = async (requestId) => {
-    try {
-      const docRef = doc(db, 'foodRequests', requestId);
-      await updateDoc(docRef, { 'foodRequest.volunteerAccepted': 'false' });
-      Alert.alert('Success', 'Assignment cancelled');
+  if (!currentUser) {
+    Alert.alert('Login Required', 'Please log in to manage assignments');
+    navigation.navigate('volunteerLogin');
+    return;
+  }
 
-      setRequestData((prev) => ({
-        ...prev,
-        foodRequest: { ...prev.foodRequest, volunteerAccepted: 'false' },
-      }));
-    } catch (error) {
-      console.error('Error cancelling assignment:', error);
-      Alert.alert('Error', 'Failed to cancel assignment');
-    }
-  };
+  try {
+    const docRef = doc(db, 'foodRequests', requestId);
+    await updateDoc(docRef, { 
+      'foodRequest.volunteerAccepted': 'false',
+      'foodRequest.volunteerId': null,  
+      'foodRequest.volunteerName': null,
+      'foodRequest.volunteerEmail': null,
+    });
+    Alert.alert('Success', 'Assignment cancelled');
+
+    setRequestData((prev) => ({
+      ...prev,
+      foodRequest: { 
+        ...prev.foodRequest, 
+        volunteerAccepted: 'false',
+        volunteerId: null,
+        volunteerName: null,
+        volunteerEmail: null,
+      },
+    }));
+  } catch (error) {
+    console.error('Error cancelling assignment:', error);
+    Alert.alert('Error', 'Failed to cancel assignment');
+  }
+};
 
   const formatDate = (timestamp) => {
     if (!timestamp) return 'Not specified';
@@ -197,16 +246,16 @@ const DisplayFoodRequest = ({ route }) => {
     setIsEditing(true);
     setEditedData({
       items: requestData.foodRequest.items,
-      requiredBefore: requestData.foodRequest.requiredBefore.toDate
-        ? requestData.foodRequest.requiredBefore.toDate()
-        : new Date(requestData.foodRequest.requiredBefore),
+      requiredBefore:
+        requestData.foodRequest.requiredBefore.toDate?.() ||
+        new Date(requestData.foodRequest.requiredBefore),
       priority: requestData.foodRequest.priority,
-      pickupDate: requestData.foodRequest.pickupDate.toDate
-        ? requestData.foodRequest.pickupDate.toDate()
-        : new Date(requestData.foodRequest.pickupDate),
-      pickupTime: requestData.foodRequest.pickupTime.toDate
-        ? requestData.foodRequest.pickupTime.toDate()
-        : new Date(requestData.foodRequest.pickupTime),
+      pickupDate:
+        requestData.foodRequest.pickupDate.toDate?.() ||
+        new Date(requestData.foodRequest.pickupDate),
+      pickupTime:
+        requestData.foodRequest.pickupTime.toDate?.() ||
+        new Date(requestData.foodRequest.pickupTime),
     });
   };
 
@@ -525,7 +574,7 @@ const DisplayFoodRequest = ({ route }) => {
                 )}
 
                 {/* assign button for volunteer */}
-                {requestData.foodRequest?.status === 'Approved' && (
+                {requestData.foodRequest?.status === 'Approved' && currentUser &&(
                   <TouchableOpacity
                     style={[
                       styles.searchButton,
@@ -566,55 +615,108 @@ const DisplayFoodRequest = ({ route }) => {
                   </TouchableOpacity>
                 )}
 
-                {showEditPickupDate && (
-                  <DateTimePicker
-                    value={editedData.requiredBefore}
-                    mode="date"
-                    display="default"
-                    onChange={(event, selectedDate) => {
-                      setShowEditRequiredDate(false);
-                      if (selectedDate) {
-                        setEditedData({
-                          ...editedData,
-                          requiredBefore: selectedDate,
-                        });
-                      }
-                    }}
-                  />
+                {/* here */}
+
+                {showEditRequiredDate && (
+                  <Modal
+                    visible={showEditRequiredDate}
+                    transparent={true}
+                    animationType="slide"
+                    onRequestClose={() => setShowEditRequiredDate(false)}
+                  >
+                    <View style={styles.modalOverlay}>
+                      <View style={styles.modalContainer}>
+                        <DateTimePicker
+                          mode="single"
+                          date={editedData.requiredBefore}
+                          minDate={new Date()} // Restrict to today/future
+                          onChange={({ date }) => {
+                            if (date)
+                              setEditedData({
+                                ...editedData,
+                                requiredBefore: date,
+                              });
+                          }}
+                          styles={defaultStyles}
+                        />
+                        <TouchableOpacity
+                          style={styles.doneButton}
+                          onPress={() => setShowEditRequiredDate(false)}
+                        >
+                          <Text style={styles.doneButtonText}>Done</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </Modal>
                 )}
 
+                {/* Edit Pickup Date Modal */}
                 {showEditPickupDate && (
-                  <DateTimePicker
-                    value={editedData.pickupDate}
-                    mode="date"
-                    display="default"
-                    onChange={(event, selectedDate) => {
-                      setShowEditPickupDate(false);
-                      if (selectedDate) {
-                        setEditedData({
-                          ...editedData,
-                          pickupDate: selectedDate,
-                        });
-                      }
-                    }}
-                  />
+                  <Modal
+                    visible={showEditPickupDate}
+                    transparent={true}
+                    animationType="slide"
+                    onRequestClose={() => setShowEditPickupDate(false)}
+                  >
+                    <View style={styles.modalOverlay}>
+                      <View style={styles.modalContainer}>
+                        <DateTimePicker
+                          mode="single"
+                          date={editedData.pickupDate}
+                          minDate={new Date()}
+                          onChange={({ date }) => {
+                            if (date)
+                              setEditedData({
+                                ...editedData,
+                                pickupDate: date,
+                              });
+                          }}
+                          styles={defaultStyles}
+                        />
+                        <TouchableOpacity
+                          style={styles.doneButton}
+                          onPress={() => setShowEditPickupDate(false)}
+                        >
+                          <Text style={styles.doneButtonText}>Done</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </Modal>
                 )}
 
+                {/* Edit Pickup Time Modal (Time-Only with Community Picker) */}
                 {showEditPickupTime && (
-                  <DateTimePicker
-                    value={editedData.pickupTime}
-                    mode="time"
-                    display="default"
-                    onChange={(event, selectedTime) => {
-                      setShowEditPickupTime(false);
-                      if (selectedTime) {
-                        setEditedData({
-                          ...editedData,
-                          pickupTime: selectedTime,
-                        });
-                      }
-                    }}
-                  />
+                  <Modal
+                    visible={showEditPickupTime}
+                    transparent={true}
+                    animationType="fade"
+                    onRequestClose={() => setShowEditPickupTime(false)}
+                  >
+                    <View style={styles.modalOverlay}>
+                      <View style={styles.modalContainer}>
+                        <DateTimePickerCommunity
+                          value={editedData.pickupTime}
+                          mode="time"
+                          display="default"
+                          is24Hour={false} // 12hr with AM/PM
+                          onChange={(event, selectedTime) => {
+                            setShowEditPickupTime(false);
+                            if (selectedTime)
+                              setEditedData({
+                                ...editedData,
+                                pickupTime: selectedTime,
+                              });
+                          }}
+                        />
+                        <TouchableOpacity
+                          style={styles.doneButton}
+                          onPress={() => setShowEditPickupTime(false)}
+                        >
+                          <Text style={styles.doneButtonText}>Done</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </Modal>
                 )}
               </View>
             </View>
@@ -852,38 +954,79 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   editDateButton: {
-  flex: 1,
-},
-pickerWrapper: {
-  flex: 1,
-  borderWidth: 1,
-  borderColor: '#ddd',
-  borderRadius: 4,
-},
-editPicker: {
-  height: 40,
-},
-counterContainer: {
-  flexDirection: 'row',
-  alignItems: 'center',
-},
-counterButton: {
-  width: 30,
-  height: 30,
-  borderRadius: 4,
-  backgroundColor: '#e0e0e0',
-  justifyContent: 'center',
-  alignItems: 'center',
-},
-counterText: {
-  fontSize: 16,
-  fontWeight: 'bold',
-},
-amountValue: {
-  marginHorizontal: 15,
-  fontSize: 14,
-  fontWeight: '500',
-},
+    flex: 1,
+  },
+  pickerWrapper: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 4,
+  },
+  editPicker: {
+    height: 40,
+  },
+  counterContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  counterButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 4,
+    backgroundColor: '#e0e0e0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  counterText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  amountValue: {
+    marginHorizontal: 15,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContainer: {
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    width: '90%',
+    maxHeight: '80%',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  doneButton: {
+    marginTop: 20,
+    backgroundColor: '#007bff',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 5,
+  },
+  doneButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  editDateButton: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 4,
+    padding: 10,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+  },
 });
 
 export default DisplayFoodRequest;

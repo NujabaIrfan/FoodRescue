@@ -1093,7 +1093,7 @@ const pickImage = async () => {
                   <Text style={styles.sectionTitle}>Find New Tasks</Text>
                   <TouchableOpacity 
                     style={styles.navigateButton}
-                    onPress={() => navigation.navigate('foodRequestListScreen')}
+                    onPress={() => navigation.navigate('acceptedFoodRequestList')}
                   >
                     <Text style={styles.navigateButtonText}>📋 Browse All Food Requests</Text>
                   </TouchableOpacity>
