@@ -26,11 +26,11 @@ const OrganizationCard = ({ name, image, joinedDetails, orgDetails, id }) => {
       style={styles.card}
       onPress={() => navigator.navigate("organization", { id })}
       activeOpacity={0.8}
-      >
+    >
       <View style={styles.organization}>
         <View style={styles.organizationDetails}>
           {image ? (
-            <Image style={styles.organizationImage} source={image} />
+            <Image style={styles.organizationImage} source={typeof image === "string" ? { uri: image } : image} />
           ) : (
             <View style={{ padding: 20 }}>
               <Icon name="building-ngo" size={60} color="#606060" />

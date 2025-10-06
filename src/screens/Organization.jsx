@@ -81,10 +81,10 @@ const Organization = ({ route }) => {
         where("organization.id", "==", id),
         limit(5)
       )
-       const snapshot = await getDocs(q);
+      const snapshot = await getDocs(q);
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setRequests(data);
-  })()
+    })()
   }, [id])
 
 
@@ -100,11 +100,11 @@ const Organization = ({ route }) => {
       <View style={styles.organizationHeader}>
         {organizationData.image ? (
           <Image
-            source={{ uri: organizationData.image }}
-            style={styles.organizationImage}
+            source={typeof organizationData.image === "string" ? { uri: organizationData.image } : organizationData.image}
+        style={styles.organizationImage}
           />
         ) : (
-          <Icon name="building-ngo" size={60} color="#606060" />
+        <Icon name="building-ngo" size={60} color="#606060" />
         )}
         <View>
           <Text style={styles.primaryHeading}>{organizationData.name}</Text>
@@ -171,7 +171,7 @@ const Organization = ({ route }) => {
         )}
       </View>
       {requests.map((request, index) => (
-        <FoodRequestCard 
+        <FoodRequestCard
           key={index}
           request={request}
         />
