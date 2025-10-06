@@ -177,6 +177,7 @@ const CreateFoodRequest = ({ route }) => {
     }
 
     const requestData = {
+      createdAt: Timestamp.fromDate(new Date()),
       organization: {
         name: selectedOrg.name,
         id: selectedOrgId,

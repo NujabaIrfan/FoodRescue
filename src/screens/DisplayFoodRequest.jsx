@@ -29,6 +29,7 @@ const DisplayFoodRequest = ({ route }) => {
   const [requestData, setRequestData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [notFound, setNotFound] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
 
   // for update feature
   const [isEditing, setIsEditing] = useState(false);
@@ -39,6 +40,17 @@ const DisplayFoodRequest = ({ route }) => {
   const defaultStyles = useDefaultStyles();
 
   useEffect(() => {
+    //check auth
+    const unsubscribe = auth.onAuthStateChanged((user)=> {
+      if(!user) {
+        setCurrentUser(null);
+      } else {
+        setCurrentUser(user);
+        console.log('User uid: ', user.uid);
+      }
+    });
+
+
     const fetchRequestData = async () => {
       if (!requestId) return;
       try {
@@ -61,6 +73,8 @@ const DisplayFoodRequest = ({ route }) => {
       }
     };
     fetchRequestData();
+
+    return () => unsubscribe();
   }, [requestId]);
   // const fetchRequestData = async () => {
   //   if (!requestId.trim()) {
@@ -94,39 +108,70 @@ const DisplayFoodRequest = ({ route }) => {
   // };
 
   const volunteerAcceptFoodRequest = async (requestId) => {
-    try {
-      const docRef = doc(db, 'foodRequests', requestId);
-      await updateDoc(docRef, { 'foodRequest.volunteerAccepted': 'true' });
-      Alert.alert('Success', 'Request assigned successfully');
+  if (!currentUser) {
+    Alert.alert('Login Required', 'Please log in to assign requests');
+    navigation.navigate('volunteerLogin');
+    return;
+  }
 
-      setRequestData((prev) => ({
-        ...prev,
-        foodRequest: { ...prev.foodRequest, volunteerAccepted: 'true' },
-      }));
-    } catch (error) {
-      console.error('Error updating request:', error);
-      Alert.alert(
-        'Error',
-        'Failed to assign the request. Check console for details.'
-      );
-    }
-  };
+  try {
+    const docRef = doc(db, 'foodRequests', requestId);
+    await updateDoc(docRef, { 
+      'foodRequest.volunteerAccepted': 'true',
+      'foodRequest.volunteerId': currentUser.uid,
+      'foodRequest.volunteerName': currentUser.displayName || currentUser.email.split('@')[0] || 'Volunteer',
+      'foodRequest.volunteerEmail': currentUser.email,
+    });
+    Alert.alert('Success', 'Request assigned successfully');
+
+    setRequestData((prev) => ({
+      ...prev,
+      foodRequest: { 
+        ...prev.foodRequest, 
+        volunteerAccepted: 'true',
+        volunteerId: currentUser.uid,
+        volunteerName: currentUser.displayName || currentUser.email.split('@')[0] || 'Volunteer',
+        volunteerEmail: currentUser.email,
+      },
+    }));
+  } catch (error) {
+    console.error('Error updating request:', error);
+    Alert.alert('Error', 'Failed to assign the request. Check console for details.');
+  }
+};
 
   const cancelVolunteerAssignment = async (requestId) => {
-    try {
-      const docRef = doc(db, 'foodRequests', requestId);
-      await updateDoc(docRef, { 'foodRequest.volunteerAccepted': 'false' });
-      Alert.alert('Success', 'Assignment cancelled');
+  if (!currentUser) {
+    Alert.alert('Login Required', 'Please log in to manage assignments');
+    navigation.navigate('volunteerLogin');
+    return;
+  }
 
-      setRequestData((prev) => ({
-        ...prev,
-        foodRequest: { ...prev.foodRequest, volunteerAccepted: 'false' },
-      }));
-    } catch (error) {
-      console.error('Error cancelling assignment:', error);
-      Alert.alert('Error', 'Failed to cancel assignment');
-    }
-  };
+  try {
+    const docRef = doc(db, 'foodRequests', requestId);
+    await updateDoc(docRef, { 
+      'foodRequest.volunteerAccepted': 'false',
+      'foodRequest.volunteerId': null,  
+      'foodRequest.volunteerName': null,
+      'foodRequest.volunteerEmail': null,
+    });
+    Alert.alert('Success', 'Assignment cancelled');
+
+    setRequestData((prev) => ({
+      ...prev,
+      foodRequest: { 
+        ...prev.foodRequest, 
+        volunteerAccepted: 'false',
+        volunteerId: null,
+        volunteerName: null,
+        volunteerEmail: null,
+      },
+    }));
+  } catch (error) {
+    console.error('Error cancelling assignment:', error);
+    Alert.alert('Error', 'Failed to cancel assignment');
+  }
+};
 
   const formatDate = (timestamp) => {
     if (!timestamp) return 'Not specified';
@@ -528,7 +573,7 @@ const DisplayFoodRequest = ({ route }) => {
                 )}
 
                 {/* assign button for volunteer */}
-                {requestData.foodRequest?.status === 'Approved' && (
+                {requestData.foodRequest?.status === 'Approved' && currentUser &&(
                   <TouchableOpacity
                     style={[
                       styles.searchButton,
