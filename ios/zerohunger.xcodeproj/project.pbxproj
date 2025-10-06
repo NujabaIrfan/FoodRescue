@@ -107,6 +107,7 @@
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
 				74386B573ED148E4AFB57CDF /* Remove signature files (Xcode workaround) */,
+				82FF5BE918EF4176A9A66A97 /* Remove signature files (Xcode workaround) */,
 			);
 			buildRules = (
 			);
@@ -222,6 +223,23 @@
 			showEnvVarsInLog = 0;
 		};
 		74386B573ED148E4AFB57CDF /* Remove signature files (Xcode workaround) */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			name = "Remove signature files (Xcode workaround)";
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			shellPath = /bin/sh;
+			shellScript = "
+          echo \"Remove signature files (Xcode workaround)\";
+          rm -rf \"$CONFIGURATION_BUILD_DIR/MapLibre.xcframework-ios.signature\";
+        ";
+		};
+		82FF5BE918EF4176A9A66A97 /* Remove signature files (Xcode workaround) */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
