@@ -72,11 +72,16 @@ const Organizations = () => {
 
   const searchFilteredOrganizations = organizationsData
     .filter((org) => org?.name?.toLowerCase()?.includes(searchQuery.trim().toLowerCase()));
-  const myOrganizations = searchFilteredOrganizations
-    .filter((org) => (org?.orgDetails?.members || []).some(user => user.id === currentUser.uid))
-  const otherOrganizations = searchFilteredOrganizations
-    .filter((org) => !(org?.orgDetails?.members || []).some(user => user.id === currentUser.uid))
+  const myOrganizations = currentUser
+    ? searchFilteredOrganizations
+      .filter((org) => (org?.orgDetails?.members || []).some(user => user.id === currentUser.uid))
+    : []
+  const otherOrganizations = currentUser
+    ? searchFilteredOrganizations
+      .filter((org) => !(org?.orgDetails?.members || []).some(user => user.id === currentUser.uid))
+    : searchFilteredOrganizations
 
+  console.log(myOrganizations, otherOrganizations)
 
   const clearSearch = () => {
     setSearchQuery('');
