@@ -33,63 +33,70 @@ export default function FoodChatBot() {
   }, []);
 
   const handleSend = async () => {
-    if (!inputText.trim()) return;
+  if (!inputText.trim()) return;
 
-    const userMessage = {
-      id: Date.now().toString(),
-      text: inputText,
-      sender: 'user',
-      timeStamp: new Date(),
-    };
+  const userMessage = {
+    id: Date.now().toString(),
+    text: inputText,
+    sender: 'user',
+    timeStamp: new Date(),
+  };
 
-    setMessages((prev) => [...prev, userMessage]);
-    setInputText('');
-    setLoading(true);
+  setMessages((prev) => [...prev, userMessage]);
+  setInputText('');
+  setLoading(true);
 
-    try {
-      let foodData = await getFoodItems({ status: 'available' });
+  try {
+    let foodData = await getFoodItems({ status: 'available' });
 
-      console.log('Food data fetched:', foodData);
+    console.log('Food data fetched:', foodData);
     console.log('Number of items:', foodData.length);
     console.log('First item:', foodData[0]);
 
-      const searchTerms = inputText.toLowerCase();
-      if (
-        searchTerms.includes('show') ||
-        searchTerms.includes('find') ||
-        searchTerms.includes('available') ||
-        searchTerms.includes('what')
-      ) {
-        foodData = await searchFoodItems(inputText);
+    const searchTerms = inputText.toLowerCase();
+    // Only search if they're asking for something specific
+    if (
+      searchTerms.includes('rice') ||
+      searchTerms.includes('flour') ||
+      searchTerms.includes('apple') ||
+      searchTerms.includes('dhal') ||
+      searchTerms.includes('from') // for "from restaurant name"
+    ) {
+      const searchResult = await searchFoodItems(inputText);
+      // Only use search results if something was found
+      if (searchResult.length > 0) {
+        foodData = searchResult;
       }
-
-      const botResponse = await generateResponse(
-        chatSession.current,
-        inputText,
-        foodData
-      );
-
-      const botMessage = {
-        id: (Date.now() + 1).toString(),
-        text: botResponse,
-        sender: 'bot',
-        timeStamp: new Date(),
-      };
-
-      setMessages((prev) => [...prev, botMessage]);
-    } catch (error) {
-      const errorMessage = {
-        id: (Date.now() + 1).toString(),
-        text: 'Sorry. I encounted an error. Please try again.',
-        sender: 'bot',
-        timeStamp: new Date(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
-      console.error('Chat error: ', error);
-    } finally {
-      setLoading(false);
+      // If nothing found in search, keep the full foodData so AI can suggest alternatives
     }
-  };
+
+    const botResponse = await generateResponse(
+      chatSession.current,
+      inputText,
+      foodData
+    );
+
+    const botMessage = {
+      id: (Date.now() + 1).toString(),
+      text: botResponse,
+      sender: 'bot',
+      timeStamp: new Date(),
+    };
+
+    setMessages((prev) => [...prev, botMessage]);
+  } catch (error) {
+    const errorMessage = {
+      id: (Date.now() + 1).toString(),
+      text: 'Sorry. I encountered an error. Please try again.',
+      sender: 'bot',
+      timeStamp: new Date(),
+    };
+    setMessages((prev) => [...prev, errorMessage]);
+    console.error('Chat error: ', error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     scrollViewRef.current?.scrollToEnd({ animated: true });
