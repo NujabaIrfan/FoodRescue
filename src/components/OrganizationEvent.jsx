@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
   },
   description: {
     fontWeight: 'normal',
-    color: "#555",
+    color: "#94a3b8",
     fontStyle: "italic",
     marginTop: 8,
     flexShrink: 1,
