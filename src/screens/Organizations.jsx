@@ -178,16 +178,21 @@ const Organizations = () => {
                   </Text>
                 </View>
               )}
-              {myOrganizations.map((org, index) => (
-                <OrganizationCard
-                  key={index}
-                  name={org.name}
-                  image={org.image}
-                  id={org.id}
-                  joinedDetails={org.joinedDetails || {}}
-                  orgDetails={org.orgDetails}
-                />
-              ))}
+              {myOrganizations.length === 0 ? (
+                <Text style={styles.filterText}>
+                  Join an organization and it will appear here.
+                </Text>
+              ) :
+                myOrganizations.map((org, index) => (
+                  <OrganizationCard
+                    key={index}
+                    name={org.name}
+                    image={org.image}
+                    id={org.id}
+                    joinedDetails={org.joinedDetails || {}}
+                    orgDetails={org.orgDetails}
+                  />
+                ))}
             </View>
           )}
         {(viewMode === organizationSearchMode.ALL ||
@@ -202,7 +207,11 @@ const Organizations = () => {
                   </Text>
                 </View>
               )}
-              {otherOrganizations.map((org, index) => (
+              {otherOrganizations.length === 0 ? (
+                <Text style={styles.filterText}>
+                  No organizations to display
+                </Text>
+              ) : otherOrganizations.map((org, index) => (
                 <OrganizationCard
                   key={index}
                   name={org.name}
