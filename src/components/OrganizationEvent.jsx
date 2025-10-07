@@ -130,17 +130,18 @@ const OrganizationEvent = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    marginTop: 5,
-    marginBottom: 5,
-    shadowColor: '#1d1d1d',
-    shadowOffset: { width: 0, height: 4 },
+    backgroundColor: "white",
+    borderRadius: 8,
+    padding: 15,
+    marginVertical: 5,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-    overflow: 'hidden',
-    padding: 8
+    shadowRadius: 3.84,
+    elevation: 3,
   },
   eventContainer: {
     flexDirection: 'row',
