@@ -169,7 +169,10 @@ const Organizations = () => {
         {(viewMode === organizationSearchMode.ALL ||
           viewMode === organizationSearchMode.MY) && (
             <View>
-              <Text style={styles.primaryHeading}>My Organizations</Text>
+              <View style={styles.iconText}>
+                <FontAwesome6Icon name="shield-heart" size={20} />
+                <Text style={styles.primaryHeading}>My Organizations</Text>
+              </View>
               {searchQuery.length > 0 && (
                 <View style={styles.resultsContainer}>
                   <Text style={styles.resultsText}>
@@ -198,7 +201,10 @@ const Organizations = () => {
         {(viewMode === organizationSearchMode.ALL ||
           viewMode === organizationSearchMode.OTHER) && (
             <View>
-              <Text style={styles.primaryHeading}>Discover</Text>
+              <View style={styles.iconText}>
+                <FontAwesome6Icon name='compass' size={20}/>
+                <Text style={styles.primaryHeading}>Discover</Text>
+              </View>
               {searchQuery.length > 0 && (
                 <View style={styles.resultsContainer}>
                   <Text style={styles.resultsText}>
@@ -319,6 +325,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 6,
   },
+  iconText: { gap: 8, flexDirection: "row", alignItems: "center" }
 });
 
 export default Organizations;

@@ -102,54 +102,76 @@ const Organization = ({ route }) => {
         {organizationData.image ? (
           <Image
             source={typeof organizationData.image === "string" ? { uri: organizationData.image } : organizationData.image}
-        style={styles.organizationImage}
+            style={styles.organizationImage}
           />
         ) : (
-        <Icon name="building-ngo" size={60} color="#606060" />
+          <Icon name="building-ngo" size={60} color="#606060" />
         )}
         <View>
           <Text style={styles.primaryHeading}>{organizationData.name}</Text>
-          <Text style={styles.infoText}>
-            Created on{' '}
-            {organizationData.orgDetails.createdDate.toDate().toLocaleDateString()}
-          </Text>
-          <Text style={styles.infoText}>
-            {organizationData.orgDetails.memberCount || 0} members
-          </Text>
-          <TouchableOpacity style={styles.button} onPress={() => navigator.navigate("organizationVolunteers", { id })}>
-            <Text style={styles.buttonText}>View members</Text>
-          </TouchableOpacity>
-          {hasAdminRights && (
-            <TouchableOpacity
-              style={styles.button}
-              onPress={() => navigator.navigate("organizationSettings", { id })}
-            >
-              <Text style={styles.buttonText}>View settings</Text>
-            </TouchableOpacity>
-          )}
+          <View style={styles.iconText}>
+            <Icon name="calendar-day" color="#555" />
+            <Text style={styles.infoText}>
+              Created on{' '}
+              {organizationData.orgDetails.createdDate.toDate().toLocaleDateString()}
+            </Text>
+          </View>
+          <View style={styles.iconText}>
+            <Icon name="people-group" color="#555" />
+            <Text style={styles.infoText}>
+              {organizationData.orgDetails.memberCount || 0} members
+            </Text>
+          </View>
         </View>
       </View>
       <Text
-        style={[styles.infoText, { marginTop: 8, marginBottom: 8 }]}
+        style={[styles.infoText, { marginTop: 8, marginBottom: 18, fontSize: 16 }]}
         numberOfLines={isShowingFullDescription ? null : 4}
         ellipsizeMode="head"
         onPress={() => setIsShowingFullDescription(!isShowingFullDescription)}
       >
         {organizationData.description}
       </Text>
-      <View style={styles.heading}>
-        <Text style={styles.primaryHeading}>Events</Text>
+      <View>
+        <TouchableOpacity
+          style={[styles.button, styles.iconText, { justifyContent: "center" }]}
+          onPress={() => navigator.navigate("organizationVolunteers", { id })}
+        >
+          <Icon name="users-viewfinder" color="white" size={20} />
+          <Text style={styles.buttonText}>View members</Text>
+        </TouchableOpacity>
         {hasAdminRights && (
           <TouchableOpacity
-            style={styles.button}
+            style={[styles.button, styles.iconText, { justifyContent: "center" }]}
+            onPress={() => navigator.navigate("organizationSettings", { id })}
+          >
+            <Icon name="gear" color="white" size={20} />
+            <Text style={styles.buttonText}>View settings</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+      <View style={styles.ruler} />
+      <View style={styles.heading}>
+        <View style={styles.iconText}>
+          <Icon name="house-tsunami" size={20} />
+          <Text style={styles.primaryHeading}>Events</Text>
+        </View>
+        {hasAdminRights && (
+          <TouchableOpacity
+            style={[styles.button, styles.iconText]}
             onPress={() => navigator.navigate('organizationEvents', { id })}
           >
+            <Icon name="screwdriver-wrench" color="white" />
             <Text style={styles.buttonText}>Manage events</Text>
           </TouchableOpacity>
         )}
       </View>
 
-      {organizationData.events.map((event, index) => (
+      {organizationData.events.length === 0 ? (
+        <Text style={[ styles.infoText, { marginTop: 5, marginBottom: 5 }]}>
+          This organization has no events
+        </Text>
+      ) : organizationData.events.map((event, index) => (
         <OrganizationEvent
           key={index}
           image={event.image}
@@ -159,19 +181,27 @@ const Organization = ({ route }) => {
           venue={event.venue}
         />
       ))}
-
+      <View style={styles.ruler} />
       <View style={styles.heading}>
-        <Text style={styles.primaryHeading}>Requests</Text>
+        <View style={styles.iconText}>
+          <Icon name="list" size={20} />
+          <Text style={styles.primaryHeading}>Requests</Text>
+        </View>
         {hasAdminRights && (
           <TouchableOpacity
-            style={styles.button}
+            style={[styles.button, styles.iconText]}
             onPress={() => navigator.navigate("foodRequestListScreen", { id })}
           >
+            <Icon name="screwdriver-wrench" color="white" />
             <Text style={styles.buttonText}>Manage requests</Text>
           </TouchableOpacity>
         )}
       </View>
-      {requests.map((request, index) => (
+      {requests.length === 0 ? (
+        <Text style={[ styles.infoText, { marginTop: 5, marginBottom: 5 }]}>
+          This organization has no requests
+        </Text>
+      ) : requests.map((request, index) => (
         <FoodRequestCard
           key={index}
           request={request}
@@ -227,6 +257,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
+  ruler: {
+    borderBottomColor: '#aaa',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    marginTop: 15,
+    marginBottom: 15
+  },
+  iconText: { gap: 8, flexDirection: "row", alignItems: "center" }
 });
 
 export default Organization;

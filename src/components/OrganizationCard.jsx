@@ -3,6 +3,7 @@ import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome6';
 import { auth, db } from '../../firebaseConfig';
 import { arrayUnion, doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
+import FontAwesome6Icon from 'react-native-vector-icons/FontAwesome6';
 
 const OrganizationCard = ({ name, image, joinedDetails, orgDetails, id }) => {
 
@@ -42,28 +43,38 @@ const OrganizationCard = ({ name, image, joinedDetails, orgDetails, id }) => {
             {joinedDetails ? (
               <View>
                 <Text style={styles.infoText}>{joinedDetails.position}</Text>
-                <Text style={styles.infoText}>
-                  Joined on{' '}
-                  {joinedDetails?.joinedDate?.toLocaleDateString()}
-                </Text>
+                <View style={styles.iconText}>
+                  <FontAwesome6Icon name='calendar-day' color="#555" />
+                  <Text style={styles.infoText}>
+                    Joined on{' '}
+                    {joinedDetails?.joinedDate?.toLocaleDateString()}
+                  </Text>
+                </View>
               </View>
             ) : (
               <View>
-                <Text style={styles.infoText}>
-                  {orgDetails.memberCount || 0} members
-                </Text>
-                <Text style={styles.infoText}>
-                  Created on{' '}
-                  {orgDetails?.createdDate?.toDate()?.toLocaleDateString()}
-                </Text>
+                <View style={styles.iconText}>
+                  <FontAwesome6Icon name="people-group" color="#555" />
+                  <Text style={styles.infoText}>
+                    {orgDetails.memberCount || 0} members
+                  </Text>
+                </View>
+                <View style={styles.iconText}>
+                  <FontAwesome6Icon name='calendar-day' color="#555" />
+                  <Text style={styles.infoText}>
+                    Created on{' '}
+                    {orgDetails?.createdDate?.toDate()?.toLocaleDateString()}
+                  </Text>
+                </View>
               </View>
             )}
           </View>
         </View>
         <View style={{ margin: 10 }}>
           {(!joinedDetails && currentUser) && (
-            <TouchableOpacity style={styles.button} onPress={joinOrganization}>
+            <TouchableOpacity style={[ styles.button, styles.iconText ]} onPress={joinOrganization}>
               <Text style={styles.buttonText}>Join</Text>
+              <FontAwesome6Icon name='right-to-bracket' color="white" />
             </TouchableOpacity>
           )}
         </View>
@@ -132,6 +143,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
+  iconText: { gap: 8, flexDirection: "row", alignItems: "center" }
 });
 
 export default OrganizationCard;
