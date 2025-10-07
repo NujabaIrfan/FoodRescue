@@ -10,7 +10,7 @@ import Icon from 'react-native-vector-icons/FontAwesome6';
 import DonationRequest from '../components/DonationRequest';
 import OrganizationEvent from '../components/OrganizationEvent';
 import { useEffect, useState } from 'react';
-import { useNavigation } from '@react-navigation/native';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
 import { collection, doc, getDoc, getDocs, limit, query, where } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { auth } from '../../firebaseConfig';
@@ -19,6 +19,7 @@ import FoodRequestCard from '../components/FoodRequestCard';
 
 const Organization = ({ route }) => {
   const { currentUser } = auth
+  const isFocused = useIsFocused()
   const navigator = useNavigation();
   const [organizationData, setOrganizationData] = useState(null)
   const [isShowingFullDescription, setIsShowingFullDescription] = useState(false);
@@ -72,7 +73,7 @@ const Organization = ({ route }) => {
         setIsFetchError(true)
       }
     })()
-  }, [id])
+  }, [id, isFocused])
 
   useEffect(() => {
     (async () => {
@@ -85,7 +86,7 @@ const Organization = ({ route }) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setRequests(data);
     })()
-  }, [id])
+  }, [id, isFocused])
 
 
   if (isFetchError) return Toast.show({

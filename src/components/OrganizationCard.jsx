@@ -44,7 +44,7 @@ const OrganizationCard = ({ name, image, joinedDetails, orgDetails, id }) => {
                 <Text style={styles.infoText}>{joinedDetails.position}</Text>
                 <Text style={styles.infoText}>
                   Joined on{' '}
-                  {joinedDetails.joinedDate.toLocaleDateString()}
+                  {joinedDetails?.joinedDate?.toLocaleDateString()}
                 </Text>
               </View>
             ) : (
@@ -54,7 +54,7 @@ const OrganizationCard = ({ name, image, joinedDetails, orgDetails, id }) => {
                 </Text>
                 <Text style={styles.infoText}>
                   Created on{' '}
-                  {orgDetails.createdDate.toDate().toLocaleDateString()}
+                  {orgDetails?.createdDate?.toDate()?.toLocaleDateString()}
                 </Text>
               </View>
             )}

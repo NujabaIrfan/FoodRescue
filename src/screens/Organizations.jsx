@@ -11,7 +11,7 @@ import {
 import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
 import FontAwesome6Icon from 'react-native-vector-icons/FontAwesome6';
 import OrganizationCard from '../components/OrganizationCard';
-import { useNavigation } from '@react-navigation/native';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
 import { auth, db } from '../../firebaseConfig';
 import { collection, getDocs, Query } from 'firebase/firestore';
 
@@ -22,6 +22,7 @@ const organizationSearchMode = {
 };
 
 const Organizations = () => {
+  const isFocused = useIsFocused()
   const navigator = useNavigation();
   const [organizationsData, setOrganizationsData] = useState([])
   const [searchQuery, setSearchQuery] = useState('');
@@ -67,7 +68,7 @@ const Organizations = () => {
       )
       setOrganizationsData(orgs)
     })()
-  }, [])
+  }, [currentUser, useIsFocused])
 
 
   const searchFilteredOrganizations = organizationsData
@@ -80,8 +81,6 @@ const Organizations = () => {
     ? searchFilteredOrganizations
       .filter((org) => !(org?.orgDetails?.members || []).some(user => user.id === currentUser.uid))
     : searchFilteredOrganizations
-
-  console.log(myOrganizations, otherOrganizations)
 
   const clearSearch = () => {
     setSearchQuery('');
