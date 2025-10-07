@@ -11,7 +11,7 @@ import {
 import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
 import FontAwesome6Icon from 'react-native-vector-icons/FontAwesome6';
 import OrganizationCard from '../components/OrganizationCard';
-import { useNavigation } from '@react-navigation/native';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
 import { auth, db } from '../../firebaseConfig';
 import { collection, getDocs, Query } from 'firebase/firestore';
 
@@ -22,6 +22,7 @@ const organizationSearchMode = {
 };
 
 const Organizations = () => {
+  const isFocused = useIsFocused()
   const navigator = useNavigation();
   const [organizationsData, setOrganizationsData] = useState([])
   const [searchQuery, setSearchQuery] = useState('');
@@ -67,7 +68,7 @@ const Organizations = () => {
       )
       setOrganizationsData(orgs)
     })()
-  }, [])
+  }, [currentUser, useIsFocused])
 
 
   const searchFilteredOrganizations = organizationsData
@@ -80,8 +81,6 @@ const Organizations = () => {
     ? searchFilteredOrganizations
       .filter((org) => !(org?.orgDetails?.members || []).some(user => user.id === currentUser.uid))
     : searchFilteredOrganizations
-
-  console.log(myOrganizations, otherOrganizations)
 
   const clearSearch = () => {
     setSearchQuery('');
@@ -170,7 +169,10 @@ const Organizations = () => {
         {(viewMode === organizationSearchMode.ALL ||
           viewMode === organizationSearchMode.MY) && (
             <View>
-              <Text style={styles.primaryHeading}>My Organizations</Text>
+              <View style={styles.iconText}>
+                <FontAwesome6Icon name="shield-heart" size={20} />
+                <Text style={styles.primaryHeading}>My Organizations</Text>
+              </View>
               {searchQuery.length > 0 && (
                 <View style={styles.resultsContainer}>
                   <Text style={styles.resultsText}>
@@ -179,22 +181,30 @@ const Organizations = () => {
                   </Text>
                 </View>
               )}
-              {myOrganizations.map((org, index) => (
-                <OrganizationCard
-                  key={index}
-                  name={org.name}
-                  image={org.image}
-                  id={org.id}
-                  joinedDetails={org.joinedDetails || {}}
-                  orgDetails={org.orgDetails}
-                />
-              ))}
+              {myOrganizations.length === 0 ? (
+                <Text style={styles.filterText}>
+                  Join an organization and it will appear here.
+                </Text>
+              ) :
+                myOrganizations.map((org, index) => (
+                  <OrganizationCard
+                    key={index}
+                    name={org.name}
+                    image={org.image}
+                    id={org.id}
+                    joinedDetails={org.joinedDetails || {}}
+                    orgDetails={org.orgDetails}
+                  />
+                ))}
             </View>
           )}
         {(viewMode === organizationSearchMode.ALL ||
           viewMode === organizationSearchMode.OTHER) && (
             <View>
-              <Text style={styles.primaryHeading}>Discover</Text>
+              <View style={styles.iconText}>
+                <FontAwesome6Icon name='compass' size={20}/>
+                <Text style={styles.primaryHeading}>Discover</Text>
+              </View>
               {searchQuery.length > 0 && (
                 <View style={styles.resultsContainer}>
                   <Text style={styles.resultsText}>
@@ -203,7 +213,11 @@ const Organizations = () => {
                   </Text>
                 </View>
               )}
-              {otherOrganizations.map((org, index) => (
+              {otherOrganizations.length === 0 ? (
+                <Text style={styles.filterText}>
+                  No organizations to display
+                </Text>
+              ) : otherOrganizations.map((org, index) => (
                 <OrganizationCard
                   key={index}
                   name={org.name}
@@ -311,6 +325,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 6,
   },
+  iconText: { gap: 8, flexDirection: "row", alignItems: "center" }
 });
 
 export default Organizations;

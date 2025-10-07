@@ -3,6 +3,7 @@ import { Alert, Image, Platform, TouchableOpacity } from 'react-native';
 import { StyleSheet, Text, View } from 'react-native';
 import Toast from 'react-native-toast-message';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import FontAwesome6Icon from 'react-native-vector-icons/FontAwesome6';
 import { db } from '../../firebaseConfig';
 import { ref } from 'firebase/storage';
 
@@ -76,12 +77,12 @@ const OrganizationEvent = ({
             <Icon name="event-note" size={60} color="#606060" />
           )}
         </View>
-        <View style={{ width: "100%" }}>
-          <View style={styles.dataRow}>
+        <View style={{ width: "100%", marginTop: 8 }}>
+          <View style={[ styles.dataRow, styles.iconText ]}>
             <Icon name='calendar-month' size={18} color='#606060'></Icon>
             <Text style={styles.infoText}>{eventDateTime === 0 ? "Cancelled" : eventDateTime.toLocaleString()}</Text>
           </View>
-          <View style={styles.dataRow}>
+          <View style={[ styles.dataRow, styles.iconText ]}>
             <Icon name='share-location' size={18} color='#606060'></Icon>
             <Text style={styles.infoText}>{venue}</Text>
           </View>
@@ -107,17 +108,19 @@ const OrganizationEvent = ({
             )}
             {showCancelButton && (
               <TouchableOpacity
-                style={[styles.button, styles.dangerButton]}
+                style={[styles.button, styles.dangerButton, styles.iconText ]}
                 onPress={showCancellationConfirmation}
               >
+                <FontAwesome6Icon name='ban' color="white" />
                 <Text style={styles.buttonText}>Cancel event</Text>
               </TouchableOpacity>
             )}
             {showDeleteButton && (
               <TouchableOpacity
-                style={[styles.button, styles.dangerButton]}
+                style={[styles.button, styles.dangerButton, styles.iconText]}
                 onPress={showDeleteConfirmation}
               >
+                <FontAwesome6Icon name='trash' color="white" />
                 <Text style={styles.buttonText}>Delete event</Text>
               </TouchableOpacity>
             )}
@@ -130,17 +133,18 @@ const OrganizationEvent = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    marginTop: 5,
-    marginBottom: 5,
-    shadowColor: '#1d1d1d',
-    shadowOffset: { width: 0, height: 4 },
+    backgroundColor: "white",
+    borderRadius: 8,
+    padding: 15,
+    marginVertical: 5,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-    overflow: 'hidden',
-    padding: 8
+    shadowRadius: 3.84,
+    elevation: 3,
   },
   eventContainer: {
     flexDirection: 'row',
@@ -157,6 +161,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
     marginBottom: 5,
+    marginLeft: 5,
   },
   infoText: {
     fontWeight: 'light',
@@ -164,7 +169,7 @@ const styles = StyleSheet.create({
   },
   description: {
     fontWeight: 'normal',
-    color: "#555",
+    color: "#94a3b8",
     fontStyle: "italic",
     marginTop: 8,
     flexShrink: 1,
@@ -194,6 +199,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
+  iconText: { gap: 8, flexDirection: "row", alignItems: "center" }
 });
 
 export default OrganizationEvent;
