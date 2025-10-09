@@ -52,7 +52,7 @@ const RestaurantList = () => {
             <TouchableOpacity 
                 onPress={() => navigation.reset({
                     index: 0,
-                    routes: [{ name: 'home' }], 
+                    routes: [navigation.navigate('tabs', { screen: 'Home' })], 
                 })}
                 style={{ paddingHorizontal: 16 }}
             >
