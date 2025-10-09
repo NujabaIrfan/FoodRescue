@@ -1,246 +1,267 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   StyleSheet,
   View,
   Text,
-  Image,
   TouchableOpacity,
   ScrollView,
+  Dimensions,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
-export default function Home() {
-  const navigator = useNavigation();
-  const [selectedStat, setSelectedStat] = useState(0);
+const { width } = Dimensions.get('window');
 
-  const stats = [
-    { number: '1.2M+', label: 'Meals Distributed', color: '#2563eb' },
-    { number: '350+', label: 'Partner Organizations', color: '#059669' },
-    { number: '75+', label: 'Communities Served', color: '#dc2626' },
-  ];
+// Green Color Palette
+const Colors = {
+  primary: '#10B981',     // Emerald Green
+  secondary: '#059669',   // Darker Emerald
+  accent: '#34D399',      // Light Emerald
+  background: '#ECFDF5',  // Light green background
+  surface: '#FFFFFF',     // Cards
+  textPrimary: '#064E3B', // Dark green
+  textSecondary: '#047857',
+  textTertiary: '#6B7280',
+  border: '#D1FAE5',
+};
+
+// Feature Cards Data
+const featureCards = [
+  {
+    title: 'Register Individual',
+    description: 'Join as a volunteer',
+    icon: 'user-plus',
+    color: '#10B981',
+    route: 'volunteerSection'
+  },
+  {
+    title: 'Create Organization',
+    description: 'Start your food initiative',
+    icon: 'briefcase',
+    color: '#059669',
+    route: 'createOrganization'
+  },
+  {
+    title: 'Donor Network',
+    description: 'Connect with food donors',
+    icon: 'heart',
+    color: '#34D399',
+    route: { screen: 'tabs', params: { screen: 'Donors' } }
+  },
+  {
+    title: 'Partner Map',
+    description: 'Find nearby organizations',
+    icon: 'map',
+    color: '#10B981',
+    route: 'organizations'
+  },
+];
+
+// Quick Stats
+const quickStats = [
+  { value: '1.2M+', label: 'Meals Served', change: '+12%' },
+  { value: '350+', label: 'Partner Orgs', change: '+5%' },
+  { value: '5K+', label: 'Volunteers', change: '+8%' },
+];
+
+// Clickable Links
+const quickLinks = [
+  {
+    title: 'Our Mission & Story',
+    icon: 'target',
+    route: 'aboutScreen'
+  },
+  {
+    title: 'Partner Organizations',
+    icon: 'users',
+    route: 'organizations'
+  },
+  {
+    title: 'Get Assistance',
+    icon: 'help-circle',
+    route: 'assistance'
+  },
+  {
+    title: 'Community Forum',
+    icon: 'message-circle',
+    route: 'community'
+  },
+];
+
+export default function Home() {
+  const navigation = useNavigation();
+
+  const navigateToRoute = (route) => {
+    if (typeof route === 'string') {
+      navigation.navigate(route);
+    } else {
+      navigation.navigate(route.screen, route.params);
+    }
+  };
 
   return (
-    <View style={{ flex: 1 }}>
-    <ScrollView style={styles.container}>
-      {/* Hero Section */}
-      <View style={styles.hero}>
-        <Image
-          source={{
-            uri: 'https://images.unsplash.com/photo-1593113616828-6f22bce62113?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-          }}
-          style={styles.heroImage}
-        />
-        <View style={styles.heroOverlay}>
-          <Text style={styles.heroTitle}>Zero Hunger Initiative</Text>
-          <Text style={styles.heroSubtitle}>
-            Sustainable Food Distribution Solutions
-          </Text>
-        </View>
-      </View>
-
-      {/* Mission Statement */}
-      <View style={styles.missionSection}>
-        <Text style={styles.sectionTitle}>Our Mission</Text>
-        <Text style={styles.missionText}>
-          We leverage technology and strategic partnerships to eliminate food
-          waste while addressing hunger in communities worldwide through
-          efficient distribution networks and sustainable practices.
-        </Text>
-      </View>
-
-      {/* Key Metrics */}
-      <View style={styles.metricsSection}>
-        <Text style={styles.sectionTitle}>Impact Metrics</Text>
-        <View style={styles.metricsContainer}>
-          {stats.map((stat, index) => (
-            <TouchableOpacity
-              key={index}
-              style={[
-                styles.metricCard,
-                {
-                  backgroundColor:
-                    selectedStat === index ? stat.color : '#ffffff',
-                  borderColor: stat.color,
-                },
-              ]}
-              onPress={() => setSelectedStat(index)}
+    <View style={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        
+        {/* Header Section */}
+        <LinearGradient
+          colors={['#10B981', '#059669']}
+          style={styles.header}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <View style={styles.headerContent}>
+            <View>
+              <Text style={styles.greeting}>Welcome to</Text>
+              <Text style={styles.appName}>Zero Hunger Initiative</Text>
+              <Text style={styles.tagline}>Your platform for food distribution and waste reduction</Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.profileButton}
+              onPress={() => navigation.navigate('profile')}
             >
-              <Text
-                style={[
-                  styles.metricNumber,
-                  { color: selectedStat === index ? '#ffffff' : stat.color },
-                ]}
-              >
-                {stat.number}
-              </Text>
-              <Text
-                style={[
-                  styles.metricLabel,
-                  { color: selectedStat === index ? '#ffffff' : '#64748b' },
-                ]}
-              >
-                {stat.label}
-              </Text>
+              <Feather name="user" size={20} color="#FFFFFF" />
             </TouchableOpacity>
+          </View>
+        </LinearGradient>
+
+        {/* Quick Stats */}
+        <View style={styles.statsContainer}>
+          {quickStats.map((stat, index) => (
+            <View key={index} style={styles.statItem}>
+              <Text style={styles.statValue}>{stat.value}</Text>
+              <Text style={styles.statLabel}>{stat.label}</Text>
+              <View style={styles.changeContainer}>
+                <Feather name="trending-up" size={12} color={Colors.secondary} />
+                <Text style={styles.changeText}>{stat.change}</Text>
+              </View>
+            </View>
           ))}
         </View>
-      </View>
 
-      {/* Services */}
-      <View style={styles.servicesSection}>
-        <Text style={styles.sectionTitle}>Our Services</Text>
-
-        <TouchableOpacity
-          style={[styles.serviceCard, styles.primaryService]}
-          onPress={() => navigator.navigate('volunteerSection')}
-        >
-          <View style={styles.serviceContent}>
-            <View style={styles.serviceInfo}>
-              <Text style={styles.serviceTitle}>Individual Registration</Text>
-              <Text style={styles.serviceDescription}>
-                Join our platform to volunteer or access food assistance
-                programs in your community
-              </Text>
-            </View>
-            <View style={styles.serviceArrow}>
-              <Text style={styles.arrowText}>›</Text>
-            </View>
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.serviceCard, styles.secondaryService]}
-          onPress={() => navigator.navigate('createOrganization')}
-        >
-          <View style={styles.serviceContent}>
-            <View style={styles.serviceInfo}>
-              <Text style={styles.serviceTitle}>Organization Partnership</Text>
-              <Text style={styles.serviceDescription}>
-                Register your organization to coordinate donation efforts and
-                resource management
-              </Text>
-            </View>
-            <View style={styles.serviceArrow}>
-              <Text style={styles.arrowText}>›</Text>
-            </View>
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.serviceCard, styles.secondaryService]}
-          onPress={() => navigator.navigate('organization')}
-        >
-          <View style={styles.serviceContent}>
-            <View style={styles.serviceInfo}>
-              <Text style={styles.serviceTitle}>Organization </Text>
-              <Text style={styles.serviceDescription}>
-                Your organization can coordinate donation efforts and resource
-                management
-              </Text>
-            </View>
-            <View style={styles.serviceArrow}>
-              <Text style={styles.arrowText}>›</Text>
-            </View>
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.serviceCard, styles.secondaryService]}
-          onPress={() => navigator.navigate('organizations')}
-        >
-          <View style={styles.serviceContent}>
-            <View style={styles.serviceInfo}>
-              <Text style={styles.serviceTitle}>Organizations</Text>
-              <Text style={styles.serviceDescription}>
-                Your organization can coordinate donation efforts and resource
-                management
-              </Text>
-            </View>
-            <View style={styles.serviceArrow}>
-              <Text style={styles.arrowText}>›</Text>
-            </View>
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.serviceCard, styles.tertiaryService]}
-          onPress={() => navigator.navigate('restaurantList')}
-        >
-          <View style={styles.serviceContent}>
-            <View style={styles.serviceInfo}>
-              <Text style={styles.serviceTitle}>Partner Network</Text>
-              <Text style={styles.serviceDescription}>
-                Access our network of restaurants and food service partners
-              </Text>
-            </View>
-            <View style={styles.serviceArrow}>
-              <Text style={styles.arrowText}>›</Text>
-            </View>
-          </View>
-        </TouchableOpacity>
-
-        {/* temporary */}
-        <TouchableOpacity
-          style={[styles.serviceCard, styles.primaryService]}
-          onPress={() => navigator.navigate('foodRequestMgtNav')}
-        >
-          <View style={styles.serviceContent}>
-            <View style={styles.serviceInfo}>
-              <Text style={styles.serviceTitle}>Food Requests</Text>
-              <Text style={styles.serviceDescription}>
-                Create and access Food Requests here
-              </Text>
-            </View>
-            <View style={styles.serviceArrow}>
-              <Text style={styles.arrowText}>›</Text>
-            </View>
-          </View>
-        </TouchableOpacity>
-      </View>
-
-      {/* Call to Action */}
-      <View style={styles.ctaSection}>
-        <Text style={styles.ctaTitle}>Make an Impact Today</Text>
-        <Text style={styles.ctaDescription}>
-          Join thousands of individuals and organizations working together to
-          create sustainable solutions for food security
-        </Text>
-        <TouchableOpacity style={styles.ctaButton}>
-          <Text style={styles.ctaButtonText}>Support Our Mission</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Live Statistics */}
-      <View style={styles.statsSection}>
-        <Text style={styles.sectionTitle}>Real-Time Impact</Text>
-        <View style={styles.statsGrid}>
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>2,847</Text>
-            <Text style={styles.statDescription}>Meals Distributed Today</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>1,205</Text>
-            <Text style={styles.statDescription}>Individuals Served</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>890kg</Text>
-            <Text style={styles.statDescription}>Food Waste Prevented</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>156</Text>
-            <Text style={styles.statDescription}>Active Volunteers</Text>
+        {/* Quick Actions Grid */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <View style={styles.featuresGrid}>
+            {featureCards.map((item, index) => (
+              <TouchableOpacity 
+                key={index} 
+                style={styles.featureCard}
+                onPress={() => navigateToRoute(item.route)}
+              >
+                <LinearGradient
+                  colors={[`${item.color}15`, `${item.color}08`]}
+                  style={[styles.featureIcon, { borderLeftColor: item.color }]}
+                >
+                  <Feather name={item.icon} size={24} color={item.color} />
+                </LinearGradient>
+                <Text style={styles.featureTitle}>{item.title}</Text>
+                <Text style={styles.featureDescription}>{item.description}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
-      </View>
 
-      
-    </ScrollView>
-    {/* chatbot - floatinng button */}
-      <TouchableOpacity
-        style={styles.floatingButton}
-        onPress={() => navigator.navigate('chatbotScreen')}
+        {/* Today's Impact */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Today's Impact</Text>
+          <LinearGradient
+            colors={['#FFFFFF', '#ECFDF5']}
+            style={styles.highlightCard}
+          >
+            <View style={styles.highlightContent}>
+              <View style={styles.highlightText}>
+                <View style={styles.metricRow}>
+                  <View style={styles.metricItem}>
+                    <Feather name="package" size={20} color={Colors.primary} />
+                    <View style={styles.metricText}>
+                      <Text style={styles.metricValue}>2,847</Text>
+                      <Text style={styles.metricLabel}>Meals Distributed</Text>
+                    </View>
+                  </View>
+                  <View style={styles.metricItem}>
+                    <Feather name="refresh-cw" size={20} color={Colors.secondary} />
+                    <View style={styles.metricText}>
+                      <Text style={styles.metricValue}>890kg</Text>
+                      <Text style={styles.metricLabel}>Waste Prevented</Text>
+                    </View>
+                  </View>
+                </View>
+                <View style={styles.volunteerInfo}>
+                  <Feather name="users" size={14} color={Colors.textTertiary} />
+                  <Text style={styles.volunteerText}>127 active volunteers today</Text>
+                </View>
+              </View>
+              <TouchableOpacity 
+                style={styles.joinButton}
+                onPress={() => navigation.navigate('volunteerSection')}
+              >
+                <Text style={styles.joinButtonText}>Join Today</Text>
+              </TouchableOpacity>
+            </View>
+          </LinearGradient>
+        </View>
+
+        {/* Quick Links */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Quick Links</Text>
+          <View style={styles.linksGrid}>
+            {quickLinks.map((item, index) => (
+              <TouchableOpacity 
+                key={index}
+                style={styles.linkCard}
+                onPress={() => navigateToRoute(item.route)}
+              >
+                <View style={styles.linkIcon}>
+                  <Feather name={item.icon} size={20} color={Colors.primary} />
+                </View>
+                <Text style={styles.linkTitle}>{item.title}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Call to Action */}
+        <View style={styles.section}>
+          <TouchableOpacity 
+            style={styles.ctaCard}
+            onPress={() => navigation.navigate('volunteerSection')}
+          >
+            <LinearGradient
+              colors={['#10B981', '#059669']}
+              style={styles.ctaGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <View style={styles.ctaContent}>
+                <View>
+                  <Text style={styles.ctaTitle}>Ready to Make a Difference?</Text>
+                  <Text style={styles.ctaSubtitle}>Join our volunteer community today</Text>
+                </View>
+                <Feather name="arrow-right" size={20} color="#FFFFFF" />
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+
+        {/* Bottom Spacer */}
+        <View style={styles.spacer} />
+      </ScrollView>
+
+      {/* Floating Support Button */}
+      <TouchableOpacity 
+        style={styles.fab}
+        onPress={() => navigation.navigate('chatbotScreen')}
       >
-        <Text style={styles.floatingButtonText}>💬</Text>
+        <LinearGradient
+          colors={['#10B981', '#059669']}
+          style={styles.fabGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <Feather name="message-circle" size={24} color="#FFFFFF" />
+        </LinearGradient>
       </TouchableOpacity>
     </View>
   );
@@ -249,244 +270,271 @@ export default function Home() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: Colors.background,
   },
-  hero: {
-    height: 280,
-    position: 'relative',
-    overflow: 'hidden',
+  header: {
+    paddingTop: 60,
+    paddingBottom: 30,
+    paddingHorizontal: 24,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
-  heroImage: {
-    width: '100%',
-    height: '100%',
-  },
-  heroOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'rgba(15, 23, 42, 0.8)',
-    padding: 24,
-  },
-  heroTitle: {
-    color: '#ffffff',
-    fontSize: 32,
-    fontWeight: '700',
-    marginBottom: 8,
-    letterSpacing: -0.5,
-  },
-  heroSubtitle: {
-    color: '#e2e8f0',
-    fontSize: 16,
-    fontWeight: '400',
-  },
-  missionSection: {
-    padding: 24,
-    backgroundColor: '#ffffff',
-    margin: 16,
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#1e293b',
-    marginBottom: 16,
-  },
-  missionText: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: '#475569',
-    fontWeight: '400',
-  },
-  metricsSection: {
-    padding: 24,
-  },
-  metricsContainer: {
+  headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 12,
+    alignItems: 'flex-start',
   },
-  metricCard: {
-    flex: 1,
-    padding: 20,
-    borderRadius: 8,
-    borderWidth: 1,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  metricNumber: {
-    fontSize: 28,
-    fontWeight: '700',
+  greeting: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 16,
     marginBottom: 4,
   },
-  metricLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    textAlign: 'center',
-    lineHeight: 16,
+  appName: {
+    color: '#FFFFFF',
+    fontSize: 28,
+    fontWeight: '700',
+    marginBottom: 8,
   },
-  servicesSection: {
-    padding: 24,
-  },
-  serviceCard: {
-    borderRadius: 8,
-    padding: 20,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  primaryService: {
-    backgroundColor: '#2563eb',
-  },
-  secondaryService: {
-    backgroundColor: '#059669',
-  },
-  tertiaryService: {
-    backgroundColor: '#7c3aed',
-  },
-  serviceContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  serviceInfo: {
-    flex: 1,
-  },
-  serviceTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#ffffff',
-    marginBottom: 6,
-  },
-  serviceDescription: {
+  tagline: {
+    color: 'rgba(255,255,255,0.9)',
     fontSize: 14,
-    color: '#e2e8f0',
-    lineHeight: 20,
-    fontWeight: '400',
   },
-  serviceArrow: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  profileButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  arrowText: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  ctaSection: {
-    backgroundColor: '#1e293b',
-    padding: 32,
-    margin: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  ctaTitle: {
-    color: '#ffffff',
-    fontSize: 24,
-    fontWeight: '600',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  ctaDescription: {
-    color: '#cbd5e1',
-    fontSize: 16,
-    lineHeight: 24,
-    textAlign: 'center',
-    marginBottom: 24,
-    fontWeight: '400',
-  },
-  ctaButton: {
-    backgroundColor: '#3b82f6',
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 6,
-  },
-  ctaButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  statsSection: {
-    padding: 24,
-    backgroundColor: '#ffffff',
-    margin: 16,
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  statsGrid: {
+  statsContainer: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
+    marginTop: -20,
+    marginHorizontal: 20,
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
   },
   statItem: {
     flex: 1,
-    minWidth: '45%',
-    padding: 16,
-    backgroundColor: '#f8fafc',
-    borderRadius: 6,
     alignItems: 'center',
   },
   statValue: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
-    color: '#1e293b',
+    color: Colors.textPrimary,
     marginBottom: 4,
   },
-  statDescription: {
+  statLabel: {
     fontSize: 12,
-    color: '#64748b',
+    color: Colors.textSecondary,
+    marginBottom: 6,
     textAlign: 'center',
-    fontWeight: '500',
   },
-  floatingButton: {
-  position: 'absolute',
-  bottom: 20,
-  right: 20,
-  width: 60,
-  height: 60,
-  borderRadius: 30,
-  backgroundColor: '#3b82f6',
-  justifyContent: 'center',
-  alignItems: 'center',
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.3,
-  shadowRadius: 4,
-  elevation: 8,
-},
-floatingButtonText: {
-  fontSize: 28,
-  color: '#ffffff',
-},
+  changeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  changeText: {
+    fontSize: 11,
+    color: Colors.secondary,
+    fontWeight: '600',
+    marginLeft: 2,
+  },
+  section: {
+    marginTop: 32,
+    paddingHorizontal: 20,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: 16,
+  },
+  featuresGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  featureCard: {
+    width: (width - 56) / 2,
+    backgroundColor: Colors.surface,
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  featureIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+    borderLeftWidth: 3,
+  },
+  featureTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+    marginBottom: 4,
+  },
+  featureDescription: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    lineHeight: 16,
+  },
+  highlightCard: {
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  highlightContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  highlightText: {
+    flex: 1,
+  },
+  metricRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  metricItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  metricText: {
+    marginLeft: 8,
+  },
+  metricValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: 2,
+  },
+  metricLabel: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  volunteerInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  volunteerText: {
+    fontSize: 12,
+    color: Colors.textTertiary,
+    marginLeft: 6,
+  },
+  joinButton: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginLeft: 16,
+  },
+  joinButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  linksGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  linkCard: {
+    width: (width - 56) / 2,
+    backgroundColor: Colors.surface,
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  linkIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: `${Colors.primary}15`,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  linkTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+    flex: 1,
+  },
+  ctaCard: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  ctaGradient: {
+    padding: 24,
+  },
+  ctaContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  ctaTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  ctaSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.9)',
+  },
+  spacer: {
+    height: 40,
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  fabGradient: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });
