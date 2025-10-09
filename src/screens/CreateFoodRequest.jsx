@@ -20,6 +20,7 @@ import {
   query,
   doc,
   getDoc,
+  deleteDoc,
 } from 'firebase/firestore';
 import { Timestamp } from 'firebase/firestore';
 import { useNavigation } from '@react-navigation/native';
@@ -59,6 +60,8 @@ const CreateFoodRequest = ({ route }) => {
       } else {
         const userId = user.uid;
         console.log('User uid', userId);
+
+        await cleanupOrphanedRequests();
 
         try {
           const userDocRef = doc(db, 'Volunteers', userId);
@@ -182,6 +185,7 @@ const CreateFoodRequest = ({ route }) => {
         name: selectedOrg.name,
         id: selectedOrgId,
         requestedBy,
+        userId: auth.currentUser.uid,
       },
       donor: providerName,
       foodRequest: {
@@ -215,6 +219,29 @@ const CreateFoodRequest = ({ route }) => {
     return date.toLocaleDateString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  const cleanupOrphanedRequests = async () => {
+  try {
+    const requestsSnapshot = await getDocs(collection(db, 'foodRequests'));
+    
+    for (const requestDoc of requestsSnapshot.docs) {
+      const requestData = requestDoc.data();
+      const orgId = requestData.organization?.id;
+      
+      if (orgId) {
+        const orgRef = doc(db, 'Organizations', orgId);
+        const orgDoc = await getDoc(orgRef);
+        
+        if (!orgDoc.exists()) {
+          await deleteDoc(requestDoc.ref);
+          console.log(`Deleted orphaned request: ${requestDoc.id}`);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error cleaning up requests:', error);
+  }
+};
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.content}>
@@ -227,7 +254,7 @@ const CreateFoodRequest = ({ route }) => {
               <Picker
                 selectedValue={selectedOrgId}
                 onValueChange={(itemValue) => {
-                  selectedOrgId(itemValue);
+                  setSelectedOrgId(itemValue);
                   // const selectedOrg = organizations.find(org => org.id === itemValue);
                   // if(selectedOrg){
                   //   setOrgName(selectedOrg.name);
