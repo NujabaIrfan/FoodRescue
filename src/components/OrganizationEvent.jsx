@@ -1,11 +1,12 @@
-import { deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { deleteDoc, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { Alert, Image, Platform, TouchableOpacity } from 'react-native';
 import { StyleSheet, Text, View } from 'react-native';
 import Toast from 'react-native-toast-message';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import FontAwesome6Icon from 'react-native-vector-icons/FontAwesome6';
-import { db } from '../../firebaseConfig';
+import { auth, db } from '../../firebaseConfig';
 import { ref } from 'firebase/storage';
+import { useEffect, useState } from 'react';
 
 const OrganizationEvent = ({
   organizationId,
@@ -14,6 +15,7 @@ const OrganizationEvent = ({
   name,
   eventDateTime,
   venue,
+  venueCoordinates,
   description,
   showEditButton,
   showDeleteButton,
@@ -21,6 +23,70 @@ const OrganizationEvent = ({
   refreshFlag,
   setRefreshFlag
 }) => {
+
+  const [distance, setDistance] = useState(Math.infinity)
+  const { currentUser } = auth
+
+  useEffect(() => {
+    if (!venueCoordinates || !currentUser) return;
+
+    const fetchDistance = async () => {
+      try {
+        const userDoc = await getDoc(doc(db, "Volunteers", currentUser.uid));
+        if (!userDoc.exists()) return;
+
+        const { address, preferredArea } = userDoc.data();
+
+        // Helper to geocode a query string
+        const geocode = async (query) => {
+          const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`;
+          const res = await fetch(url, {
+            headers: { "User-Agent": "FoodRescue/1.0 (senirupasan@gmail.com)" }
+          });
+          const data = await res.json();
+          if (data.length > 0) {
+            return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+          }
+          return null;
+        };
+
+        const userLocations = [];
+        for (let query of [address, preferredArea]) {
+          if (!query) continue;
+          const loc = await geocode(query);
+          if (loc) userLocations.push(loc);
+        }
+
+        if (userLocations.length === 0) return;
+
+        // Calculate distance from event
+        const eventLat = venueCoordinates[1];
+        const eventLon = venueCoordinates[0];
+
+        const toRad = (deg) => deg * (Math.PI / 180);
+        const haversineDistance = (lat1, lon1, lat2, lon2) => {
+          const R = 6371; // km
+          const dLat = toRad(lat2 - lat1);
+          const dLon = toRad(lon2 - lon1);
+          const a =
+            Math.sin(dLat / 2) ** 2 +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+          return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        };
+
+        const distances = userLocations.map(loc =>
+          haversineDistance(loc.lat, loc.lon, eventLat, eventLon)
+        );
+
+        setDistance(Math.min(...distances).toFixed(1)); // km, 1 decimal
+      } catch (err) {
+        console.error("Error fetching geocode:", err);
+      }
+    };
+
+    fetchDistance();
+  }, [venueCoordinates, currentUser]);
+
 
   const deleteEvent = async () => {
     await deleteDoc(doc(db, "Organizations", organizationId, "events", eventId))
@@ -78,13 +144,16 @@ const OrganizationEvent = ({
           )}
         </View>
         <View style={{ width: "100%", marginTop: 8 }}>
-          <View style={[ styles.dataRow, styles.iconText ]}>
+          <View style={[styles.dataRow, styles.iconText]}>
             <Icon name='calendar-month' size={18} color='#606060'></Icon>
             <Text style={styles.infoText}>{eventDateTime === 0 ? "Cancelled" : eventDateTime.toLocaleString()}</Text>
           </View>
-          <View style={[ styles.dataRow, styles.iconText ]}>
-            <Icon name='share-location' size={18} color='#606060'></Icon>
-            <Text style={styles.infoText}>{venue}</Text>
+          <View style={[styles.dataRow, styles.iconText, { alignItems: "flex-start" }]}>
+            <Icon name='share-location' size={18} color='#606060' />
+            <View>
+              <Text style={styles.infoText}>{venue}</Text>
+              {(distance && distance < 20) && (<Text style={styles.description}>({distance} km away from you)</Text>)}
+            </View>
           </View>
           <View style={styles.dataRow}>
             <Text
@@ -108,7 +177,7 @@ const OrganizationEvent = ({
             )}
             {showCancelButton && (
               <TouchableOpacity
-                style={[styles.button, styles.dangerButton, styles.iconText ]}
+                style={[styles.button, styles.dangerButton, styles.iconText]}
                 onPress={showCancellationConfirmation}
               >
                 <FontAwesome6Icon name='ban' color="white" />
@@ -176,8 +245,8 @@ const styles = StyleSheet.create({
   },
   dataRow: {
     flexDirection: 'row',
-    flexWrap: "wrap",
-    width: "75%",
+
+    width: "60%",
   },
   button: {
     backgroundColor: '#389c9a',
