@@ -14,18 +14,12 @@ import {
 
 import { launchImageLibrary } from 'react-native-image-picker';
 import DateTimePicker from 'react-native-ui-datepicker';
-/*import {
-  Camera,
-  MapView,
-  RasterLayer,
-  RasterSource,
-  UserLocation,
-} from '@maplibre/maplibre-react-native';*/
-
 import pinImage from '../../assets/pin.png';
 import { addDoc, collection } from 'firebase/firestore';
 import { auth, db } from '../../firebaseConfig';
 import { useNavigation } from '@react-navigation/native';
+import EventMap from '../components/EventMap';
+import Toast from 'react-native-toast-message';
 
 export default function CreateEvent({ route }) {
 
@@ -37,8 +31,10 @@ export default function CreateEvent({ route }) {
   const [eventDateTime, setEventDateTime] = useState(new Date());
   const [hasPhysicalVenue, setHasPhysicalVenue] = useState(false);
   // todo: replace hardcoded venue with nominatim geocoded data
-  const [venue, setVenue] = useState("Colombo, Sri Lanka")
-  const coordinatesRef = useRef();
+  const [venue, setVenue] = useState("Sri Lanka")
+  const coordinatesRef = useRef()
+  const [coordinatesLastUpdated, setCoordinatesLastUpdated] = useState(Date.now())
+  const [coordinatesTrigger, setCoordinatesTrigger] = useState(Date.now())
   const navigator = useNavigation()
 
   const uploadImage = async () => {
@@ -77,6 +73,21 @@ export default function CreateEvent({ route }) {
     requestLocationPermission();
   }, [requestLocationPermission]);
 
+  useEffect(() => {
+    //if (Date.now() < coordinatesLastUpdated + 1000) return
+    (async () => {
+      const [lon, lat] = coordinatesRef.current
+      const lookupResponse = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`, {
+        headers: {
+          "User-Agent": "FoodRescue/1.0 (senirupasan@gmail.com)"
+        }
+      })
+      const locationName = (await lookupResponse.json()).display_name
+      setVenue(locationName)
+      setCoordinatesLastUpdated(Date.now())
+    })()
+  }, [coordinatesTrigger])
+
   const createEvent = async () => {
     const { currentUser } = auth;
     if (!currentUser) return Toast.show({
@@ -86,23 +97,26 @@ export default function CreateEvent({ route }) {
     });
     if (!name.trim()) return Toast.show({
       type: "error",
-      text1: "Please provide a valid name for your organization",
+      text1: "Please provide a valid name for your event",
       position: "top"
     });
     if (!description.trim()) return Toast.show({
       type: "error",
-      text1: "Please provide a valid description for your organization",
+      text1: "Please provide a valid description for your event",
       position: "top"
     })
-    
+
+
     const eventRef = collection(db, "Organizations", id, "events")
 
-    addDoc(eventRef, {
+
+    await addDoc(eventRef, {
       name,
       description,
       eventDateTime,
       venue,
-      image
+      venueCoordinates: coordinatesRef.current,
+      image,
     })
 
     navigator.navigate("organization", { id })
@@ -116,14 +130,14 @@ export default function CreateEvent({ route }) {
       <Text style={styles.label}>Event name</Text>
       <TextInput
         style={styles.input}
-        onChange={(evt) => setName(evt.target.value)}
+        onChangeText={setName}
         placeholder="Name of the event" />
 
       <Text style={styles.label}>Description</Text>
       <TextInput
         style={styles.textarea}
         placeholder="Type here"
-        onChange={(evt) => setDescription(evt.target.value)}
+        onChangeText={setDescription}
         multiline={true}
       />
 
@@ -153,38 +167,22 @@ export default function CreateEvent({ route }) {
         </View>
       </View>
 
-      {/*hasPhysicalVenue && (
+      {hasPhysicalVenue && (
         <View>
           <Text style={styles.infoText}>Please select a venue below.</Text>
           <View style={styles.mapContainer}>
-            <MapView
-              style={styles.mapView}
-              onRegionDidChange={(feature) =>
-                (coordinatesRef.current = feature.geometry.coordinates)
-              }
-            >
-              <RasterSource
-                id="osm"
-                tileUrlTemplates={[
-                  'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-                ]}
-                tileSize={256}
-              >
-                <RasterLayer id="osm-layer" sourceID="osm" />
-              </RasterSource>
-              <UserLocation visible={true} showsUserHeadingIndicator={true} />
-              <Camera
-                zoomLevel={18}
-                followUserLocation={true}
-                followUserMode="compass"
-              />
-            </MapView>
+            {hasPhysicalVenue && (
+              <EventMap coordinatesRef={coordinatesRef} onCoordinatesChange={setCoordinatesTrigger} />
+            )}
             <View style={styles.mapCenterMark}>
               <Image source={pinImage} />
             </View>
           </View>
+          <View>
+            <Text style={styles.infoText}>{venue}</Text>
+          </View>
         </View>
-      )*/}
+      )}
 
       <View style={styles.imageUploadView}>
         <Image source={image} style={styles.imagePreview} />
@@ -199,7 +197,7 @@ export default function CreateEvent({ route }) {
           <Text style={styles.infoText}>Max file size: 2MB</Text>
         </View>
       </View>
-      <TouchableOpacity style={styles.button} onPress={createEvent}>
+      <TouchableOpacity style={[styles.button, { marginBottom: 80 }]} onPress={createEvent}>
         <Text style={styles.buttonText}>Create event</Text>
       </TouchableOpacity>
     </ScrollView>
@@ -209,7 +207,7 @@ export default function CreateEvent({ route }) {
 const styles = StyleSheet.create({
   content: {
     padding: 16,
-    backgroundColor: '#fefefe',
+    backgroundColor: '#fefefe'
   },
   flexRow: {
     flexDirection: 'row',
