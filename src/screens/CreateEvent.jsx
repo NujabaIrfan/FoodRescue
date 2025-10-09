@@ -15,11 +15,13 @@ import {
 import { launchImageLibrary } from 'react-native-image-picker';
 import DateTimePicker from 'react-native-ui-datepicker';
 import pinImage from '../../assets/pin.png';
-import { addDoc, collection } from 'firebase/firestore';
+import { addDoc, collection, doc, getDoc, getDocs } from 'firebase/firestore';
 import { auth, db } from '../../firebaseConfig';
 import { useNavigation } from '@react-navigation/native';
 import EventMap from '../components/EventMap';
 import Toast from 'react-native-toast-message';
+import { getProximityData } from '../services/geminiMemberProximityService';
+import FontAwesome6Icon from 'react-native-vector-icons/FontAwesome6';
 
 export default function CreateEvent({ route }) {
 
@@ -30,11 +32,14 @@ export default function CreateEvent({ route }) {
   const [description, setDescription] = useState("")
   const [eventDateTime, setEventDateTime] = useState(new Date());
   const [hasPhysicalVenue, setHasPhysicalVenue] = useState(false);
-  // todo: replace hardcoded venue with nominatim geocoded data
   const [venue, setVenue] = useState("Sri Lanka")
   const coordinatesRef = useRef()
-  const [coordinatesLastUpdated, setCoordinatesLastUpdated] = useState(Date.now())
+  const [memberLocations, setMemberLocations] = useState([])
   const [coordinatesTrigger, setCoordinatesTrigger] = useState(Date.now())
+  const [proximityApproximationSuccess, setProximityApproximationSuccess] = useState(false)
+  const [proximityApproximationMessage, setProximityApproximationMessage] = useState("")
+  const [proximityApproximationLoading, setProximityApproximationLoading] = useState(false)
+  const debounceTimerRef = useRef(null)
   const navigator = useNavigation()
 
   const uploadImage = async () => {
@@ -74,19 +79,55 @@ export default function CreateEvent({ route }) {
   }, [requestLocationPermission]);
 
   useEffect(() => {
-    //if (Date.now() < coordinatesLastUpdated + 1000) return
     (async () => {
-      const [lon, lat] = coordinatesRef.current
+      const [lon, lat] = coordinatesRef.current;
       const lookupResponse = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`, {
         headers: {
           "User-Agent": "FoodRescue/1.0 (senirupasan@gmail.com)"
         }
-      })
-      const locationName = (await lookupResponse.json()).display_name
-      setVenue(locationName)
-      setCoordinatesLastUpdated(Date.now())
+      });
+      const locationName = (await lookupResponse.json()).display_name;
+      setVenue(locationName);
+
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = setTimeout(async () => {
+        try {
+          setProximityApproximationLoading(true)
+          console.log('AI proximity request triggered...');
+          const result = await getProximityData(memberLocations, [lon, lat]);
+          const { success, message } = JSON.parse(result)
+          setProximityApproximationSuccess(success)
+          setProximityApproximationMessage(message)
+        } catch (err) {
+          console.error('AI request failed', err);
+        } finally {
+          setProximityApproximationLoading(false)
+        }
+      }, 2000);
+
+    })();
+  }, [coordinatesTrigger]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const membersSnap = await getDocs(collection(db, "Organizations", id, "members"))
+
+        const locations = await Promise.all(
+          membersSnap.docs.map(async (m) => {
+            const userSnap = await getDoc(doc(db, "Volunteers", m.id))
+            const userData = userSnap.data()
+            return [userData.address, userData.preferredArea]
+          })
+        )
+
+        setMemberLocations(locations.flat())
+      } catch (err) {
+        console.error(err)
+        setIsFetchError(true)
+      }
     })()
-  }, [coordinatesTrigger])
+  }, [id])
 
   const createEvent = async () => {
     const { currentUser } = auth;
@@ -172,10 +213,29 @@ export default function CreateEvent({ route }) {
           <Text style={styles.infoText}>Please select a venue below.</Text>
           <View style={styles.mapContainer}>
             {hasPhysicalVenue && (
-              <EventMap coordinatesRef={coordinatesRef} onCoordinatesChange={setCoordinatesTrigger} />
+              <EventMap
+                coordinatesRef={coordinatesRef}
+                onCoordinatesChange={setCoordinatesTrigger}
+                memberLocations={memberLocations}
+              />
             )}
-            <View style={styles.mapCenterMark}>
-              <Image source={pinImage} />
+
+            <View>
+              {proximityApproximationLoading ? (
+                <View style={[styles.iconText, styles.aiLoadingContainer]}>
+                  <FontAwesome6Icon name='magnifying-glass-location' color="white" size={14} />
+                  <Text style={{ color: "white", fontWeight: "bold", fontSize: 14 }}>Finding your crowd...</Text>
+                </View>
+              ) : (
+                proximityApproximationSuccess && (
+                  <View style={[styles.iconText, styles.aiResultContainer]}>
+                    <FontAwesome6Icon name="wand-sparkles" color="white" size={14} />
+                    <Text style={{ color: "white", fontWeight: "bold", fontSize: 14 }}>
+                      {proximityApproximationMessage}
+                    </Text>
+                  </View>
+                )
+              )}
             </View>
           </View>
           <View>
@@ -329,4 +389,31 @@ const styles = StyleSheet.create({
     top: '50%',
     zIndex: 10,
   },
+  aiLoadingContainer: {
+    backgroundColor: "#ffa500",
+    padding: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginTop: 10,
+    borderColor: "#ffd700",
+    shadowColor: "#ffb300",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 15,
+    elevation: 10,
+  },
+  aiResultContainer: {
+    backgroundColor: "#00c875",
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 10,
+    borderColor: "#00ff9f",
+    shadowColor: "#00ff9f",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 20,
+    elevation: 15,
+  },
+  iconText: { gap: 8, flexDirection: "row", alignItems: "center" }
 });
