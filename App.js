@@ -125,7 +125,7 @@ const Navigation = createStaticNavigation(RootStack);
 
 export default function App() {
   return (
-    <SafeAreaView style={{ flex: 1 }}>
+    <SafeAreaView style={{ flex: 1 }} edges={['bottom', 'left', 'right']}>
       <Navigation />
       <Toast />
     </SafeAreaView>
