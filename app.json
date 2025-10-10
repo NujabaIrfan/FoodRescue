@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "zero_hunger",
-    "slug": "zero_hunger",
+    "name": "Food Rescue",
+    "slug": "food_rescue",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
