@@ -208,6 +208,7 @@ const Organization = ({ route }) => {
           request={request}
         />
       ))}
+      <View  style={{ height: 150 }}/>
     </ScrollView>
   );
 };
