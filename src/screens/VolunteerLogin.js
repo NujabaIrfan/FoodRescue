@@ -138,6 +138,11 @@ export default function VolunteerLogin() {
         fontWeight: 'bold',
         color: '#fff',
       },
+      headerStyle: {
+      height: 100, // Adjust this value as needed
+      },
+      // Add safe area insets for iOS
+      headerStatusBarHeight: Platform.OS === 'ios' ? 0 : 0,
     });
   }, [navigation]);
 
