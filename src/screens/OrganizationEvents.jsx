@@ -46,26 +46,29 @@ export default function OrganizationEvents({ route }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.searchInputContainer}>
-        <MaterialIcon
-          name="search"
-          size={20}
-          color="#555"
-          style={styles.searchIcon}
-        />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search for organizations..."
-          placeholderTextColor="#888"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          underlineColorAndroid="transparent"
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
-            <MaterialIcon name="close" size={20} color="#555" />
-          </TouchableOpacity>
-        )}
+      <View style={styles.searchContainer}>
+
+        <View style={styles.searchInputContainer}>
+          <MaterialIcon
+            name="search"
+            size={20}
+            color="#555"
+            style={styles.searchIcon}
+          />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search for organizations..."
+            placeholderTextColor="#888"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            underlineColorAndroid="transparent"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
+              <MaterialIcon name="close" size={20} color="#555" />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
       <ScrollView style={styles.content}>
         <Text style={styles.primaryHeading}>Upcoming events</Text>
@@ -112,6 +115,7 @@ export default function OrganizationEvents({ route }) {
               setRefreshFlag={setRefreshFlag}
             />
           )))}
+        <View style={{ height: 150 }} />
       </ScrollView>
       <TouchableOpacity
         style={styles.newEventIcon}

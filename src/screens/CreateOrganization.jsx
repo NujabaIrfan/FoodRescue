@@ -72,7 +72,7 @@ export default function CreateOrganization() {
         style={styles.input}
         placeholder="Name"
         value={name}
-        onChange={(e) => setName(e.target.value)} />
+        onChangeText={setName} />
 
       <Text style={styles.label}>Description</Text>
       <TextInput
@@ -80,11 +80,11 @@ export default function CreateOrganization() {
         placeholder="Type here"
         multiline={true}
         value={description}
-        onChange={(e) => setDescription(e.target.value)}
+        onChangeText={setDescription}
       />
 
       <View style={styles.imageUploadView}>
-        <Image source={image} style={styles.imagePreview} />
+        <Image source={typeof image === "string" ? { uri: image } : image } style={styles.imagePreview} />
         <View style={{ flexGrow: 1 }}>
           <Text style={styles.label}>Organization Image</Text>
           <TouchableOpacity style={styles.button} onPress={uploadImage}>

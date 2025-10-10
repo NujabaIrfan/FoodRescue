@@ -179,6 +179,7 @@ const Organization = ({ route }) => {
           description={event.description}
           eventDateTime={event.eventDateTime === 0 ? 0 : new Date(event.eventDateTime.toDate())}
           venue={event.venue}
+          venueCoordinates={event.venueCoordinates}
         />
       ))}
       <View style={styles.ruler} />
@@ -207,6 +208,7 @@ const Organization = ({ route }) => {
           request={request}
         />
       ))}
+      <View  style={{ height: 150 }}/>
     </ScrollView>
   );
 };

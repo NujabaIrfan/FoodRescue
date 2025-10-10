@@ -2,11 +2,10 @@ import { deleteDoc, doc, getDoc, updateDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { Alert, Image, Platform, Text, TextInput, TouchableOpacity } from "react-native";
 import { ScrollView, StyleSheet, View } from "react-native";
-import { db } from "../../firebaseConfig";
+import { db, auth } from "../../firebaseConfig";
 import Toast from "react-native-toast-message";
 import { launchImageLibrary } from 'react-native-image-picker';
 import { useNavigation } from "@react-navigation/native";
-
 
 export default function OrganizationSettings({ route }) {
 
@@ -113,7 +112,7 @@ export default function OrganizationSettings({ route }) {
       navigator.navigate("organizations")
       Toast.show({
         type: "success",
-        text1: "Archived organization!"
+        text1: "Deleted organization!"
       })
     } catch (error) {
       console.error(error)
@@ -163,7 +162,7 @@ export default function OrganizationSettings({ route }) {
           style={styles.input}
           placeholder="Name"
           value={name}
-          onChange={(e) => setName(e.target.value)} />
+          onChangeText={setName} />
 
         <Text style={styles.label}>Description</Text>
         <TextInput
@@ -171,13 +170,13 @@ export default function OrganizationSettings({ route }) {
           placeholder="Type here"
           multiline={true}
           value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          onChangeText={setDescription}
         />
         <TouchableOpacity style={styles.button} onPress={updateInformation}>
           <Text style={styles.buttonText}>Update information</Text>
         </TouchableOpacity>
         <View style={styles.imageUploadView}>
-          <Image source={image} style={styles.imagePreview} />
+          <Image source={typeof image === "string" ? { uri: image } : image} style={styles.imagePreview} />
           <View style={{ flexGrow: 1 }}>
             <Text style={styles.label}>Organization Image</Text>
             <TouchableOpacity style={styles.button} onPress={uploadImage}>

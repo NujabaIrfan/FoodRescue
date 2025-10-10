@@ -68,7 +68,7 @@ const Organizations = () => {
       )
       setOrganizationsData(orgs)
     })()
-  }, [currentUser, useIsFocused])
+  }, [currentUser, isFocused])
 
 
   const searchFilteredOrganizations = organizationsData
@@ -228,6 +228,7 @@ const Organizations = () => {
               ))}
             </View>
           )}
+          <View style={{ height: 40 }}/>
       </ScrollView>
       <TouchableOpacity
         style={styles.newOrganizationIcon}
