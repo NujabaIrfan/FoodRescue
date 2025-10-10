@@ -34,6 +34,7 @@ import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome6';
 import OrganizationSettings from './src/screens/OrganizationSettings';
 import AcceptedFoodRequestList from './src/screens/AcceptedFoodRequestList';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 
 const Tab = createBottomTabNavigator()
@@ -124,10 +125,10 @@ const Navigation = createStaticNavigation(RootStack);
 
 export default function App() {
   return (
-    <>
+    <SafeAreaView style={{ flex: 1 }}>
       <Navigation />
       <Toast />
-    </>
+    </SafeAreaView>
   );
 }
 
